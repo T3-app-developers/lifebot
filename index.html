@@ -1,0 +1,268 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Lifebot Town</title>
+  <style>
+    html, body {
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+    }
+    #renderCanvas { width: 100%; height: 100%; }
+    #ui {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      color: white;
+      font-family: sans-serif;
+      background: rgba(0,0,0,0.5);
+      padding: 4px 8px;
+      border-radius: 4px;
+    }
+  </style>
+  <script src="https://cdn.babylonjs.com/babylon.js"></script>
+</head>
+<body>
+  <canvas id="renderCanvas"></canvas>
+  <div id="ui">Coins: <span id="coinCount">0</span></div>
+  <div id="message" style="display:none;position:absolute;top:40px;left:10px;color:white;font-family:sans-serif;background:rgba(0,0,0,0.7);padding:4px 8px;border-radius:4px;"></div>
+  <script>
+    const canvas = document.getElementById('renderCanvas');
+    const engine = new BABYLON.Engine(canvas, true);
+
+    const gameState = { coins: 10, heldItem: null };
+    const coinEl = document.getElementById('coinCount');
+    const messageEl = document.getElementById('message');
+    function updateCoinsUI(){
+      coinEl.textContent = gameState.coins;
+    }
+    function showMessage(msg){
+      messageEl.textContent = msg;
+      messageEl.style.display = 'block';
+      clearTimeout(showMessage._t);
+      showMessage._t = setTimeout(()=>{messageEl.style.display='none';}, 2000);
+    }
+
+    function buildHouse(name, x, scene, mats) {
+      const house = new BABYLON.TransformNode(name, scene);
+      const size = 4;
+      const height = 3;
+      const t = 0.1;
+      const doorWidth = 1.5;
+      const doorHeight = 2.2;
+
+      const floor = BABYLON.MeshBuilder.CreateBox(name+'Floor', {width:size, depth:size, height:t}, scene);
+      floor.position.y = t/2;
+      floor.material = mats.brick;
+      floor.parent = house;
+
+      const roof = BABYLON.MeshBuilder.CreateBox(name+'Roof', {width:size, depth:size, height:t}, scene);
+      roof.position.y = height + t/2;
+      roof.material = mats.brick;
+      roof.parent = house;
+
+      const back = BABYLON.MeshBuilder.CreateBox(name+'Back', {width:size, height:height, depth:t}, scene);
+      back.position.set(0, height/2, -size/2 + t/2);
+      back.material = mats.brick;
+      back.parent = house;
+
+      const left = BABYLON.MeshBuilder.CreateBox(name+'Left', {width:t, height:height, depth:size}, scene);
+      left.position.set(-size/2 + t/2, height/2, 0);
+      left.material = mats.brick;
+      left.parent = house;
+
+      const right = BABYLON.MeshBuilder.CreateBox(name+'Right', {width:t, height:height, depth:size}, scene);
+      right.position.set(size/2 - t/2, height/2, 0);
+      right.material = mats.brick;
+      right.parent = house;
+
+      const sideWidth = (size - doorWidth)/2;
+      const frontLeft = BABYLON.MeshBuilder.CreateBox(name+'FrontLeft', {width:sideWidth, height:height, depth:t}, scene);
+      frontLeft.position.set(-doorWidth/2 - sideWidth/2, height/2, size/2 - t/2);
+      frontLeft.material = mats.brick;
+      frontLeft.parent = house;
+
+      const frontRight = BABYLON.MeshBuilder.CreateBox(name+'FrontRight', {width:sideWidth, height:height, depth:t}, scene);
+      frontRight.position.set(doorWidth/2 + sideWidth/2, height/2, size/2 - t/2);
+      frontRight.material = mats.brick;
+      frontRight.parent = house;
+
+      const topH = height - doorHeight;
+      const frontTop = BABYLON.MeshBuilder.CreateBox(name+'FrontTop', {width:doorWidth, height:topH, depth:t}, scene);
+      frontTop.position.set(0, doorHeight + topH/2, size/2 - t/2);
+      frontTop.material = mats.brick;
+      frontTop.parent = house;
+
+      const bed = BABYLON.MeshBuilder.CreateBox(name+'Bed', {width:1.5, height:0.5, depth:2}, scene);
+      bed.position.set(-1.2, 0.25, -0.8);
+      bed.material = mats.brick;
+      bed.parent = house;
+
+      const sink = BABYLON.MeshBuilder.CreateBox(name+'Sink', {width:1, height:0.6, depth:0.5}, scene);
+      sink.position.set(1.2, 0.3, -1.5);
+      sink.isPickable = true;
+      sink.material = mats.metal;
+      sink.parent = house;
+
+      const faucet = BABYLON.MeshBuilder.CreateBox(name+'Faucet', {width:0.1, height:0.1, depth:0.4}, scene);
+      faucet.position.set(0, 0.35, -0.25);
+      faucet.material = mats.metal;
+      faucet.parent = sink;
+
+      const water = BABYLON.MeshBuilder.CreateCylinder(name+'Water', {diameter:0.1, height:0.3}, scene);
+      water.position.set(0, 0.15, -0.4);
+      water.material = mats.water;
+      water.parent = sink;
+      water.scaling.y = 0;
+
+      const anim = new BABYLON.Animation(name+'Tap', 'rotation.z', 30, BABYLON.Animation.ANIMATIONTYPE_FLOAT, BABYLON.Animation.ANIMATIONLOOPMODE_CYCLE);
+      anim.setKeys([
+        {frame:0, value:0},
+        {frame:15, value:Math.PI/2},
+        {frame:30, value:0}
+      ]);
+
+      const waterAnim = new BABYLON.Animation(name+'WaterAnim', 'scaling.y', 30, BABYLON.Animation.ANIMATIONTYPE_FLOAT, BABYLON.Animation.ANIMATIONLOOPMODE_CYCLE);
+      waterAnim.setKeys([
+        {frame:0, value:0},
+        {frame:10, value:1},
+        {frame:20, value:1},
+        {frame:30, value:0}
+      ]);
+
+      faucet.animations = [anim];
+      water.animations = [waterAnim];
+      sink.actionManager = new BABYLON.ActionManager(scene);
+      sink.actionManager.registerAction(new BABYLON.ExecuteCodeAction(BABYLON.ActionManager.OnPickTrigger, function(){
+        scene.beginAnimation(faucet, 0, 30, false);
+        scene.beginAnimation(water, 0, 30, false);
+      }));
+
+      house.position.x = x;
+    }
+
+    function buildShop(name, position, scene, mats) {
+      const shop = new BABYLON.TransformNode(name, scene);
+      const size = 4;
+      const box = BABYLON.MeshBuilder.CreateBox(name+'Box', {width:size, depth:size, height:3}, scene);
+      box.position.y = 1.5;
+      box.material = mats.brick;
+      box.parent = shop;
+
+      // create items on a simple shelf
+      const items = [];
+      for(let i=0;i<3;i++){
+        const itm = BABYLON.MeshBuilder.CreateSphere(name+'Item'+i, {diameter:0.5}, scene);
+        itm.position.set(-1 + i*1, 1.2, 0);
+        itm.material = mats.metal;
+        itm.isPickable = true;
+        itm.metadata = {price:5+i*2, index:i};
+        itm.parent = shop;
+        items.push(itm);
+      }
+
+      // checkout till
+      const till = BABYLON.MeshBuilder.CreateBox(name+'Till', {width:1.5, depth:1, height:1}, scene);
+      till.position.set(0,0.5,size/2 - 0.6);
+      till.material = mats.metal;
+      till.isPickable = false;
+      till.parent = shop;
+
+      shop.position.copyFrom(position);
+      shop.items = items;
+      shop.till = till;
+      return shop;
+    }
+
+    const createScene = function() {
+      const scene = new BABYLON.Scene(engine);
+
+      const groundMat = new BABYLON.StandardMaterial('groundMat', scene);
+      groundMat.diffuseColor = new BABYLON.Color3(0.2, 0.8, 0.2);
+
+      const brickMat = new BABYLON.StandardMaterial('brickMat', scene);
+      brickMat.diffuseColor = new BABYLON.Color3(0.8, 0.3, 0.3);
+
+      const metalMat = new BABYLON.StandardMaterial('metalMat', scene);
+      metalMat.diffuseColor = new BABYLON.Color3(0.8, 0.8, 0.8);
+
+      const waterMat = new BABYLON.StandardMaterial('waterMat', scene);
+      waterMat.diffuseColor = new BABYLON.Color3(0.3, 0.3, 1);
+      waterMat.alpha = 0.7;
+
+      const mats = { brick: brickMat, metal: metalMat, water: waterMat, ground: groundMat };
+
+      const camera = new BABYLON.UniversalCamera('player', new BABYLON.Vector3(0, 1.7, -10), scene);
+      camera.attachControl(canvas, true);
+      camera.speed = 0.25;
+
+      scene.onPointerDown = function(){
+        if(!document.pointerLockElement){
+          canvas.requestPointerLock();
+        }
+      };
+
+      new BABYLON.HemisphericLight('light', new BABYLON.Vector3(0, 1, 0), scene);
+      const ground = BABYLON.MeshBuilder.CreateGround('ground', {width:40, height:20}, scene);
+      ground.material = groundMat;
+
+      buildHouse('house1', -6, scene, mats);
+      buildHouse('house2', 0, scene, mats);
+      buildHouse('house3', 6, scene, mats);
+
+      const shop = buildShop('shop', new BABYLON.Vector3(0, 0, 8), scene, mats);
+      shop.items.forEach(item => {
+        item.actionManager = new BABYLON.ActionManager(scene);
+        item.actionManager.registerAction(new BABYLON.ExecuteCodeAction(BABYLON.ActionManager.OnPickTrigger, function(){
+          if(!gameState.heldItem){
+            gameState.heldItem = item;
+            item.setParent(camera);
+            item.position.set(0.5, -0.5, 1);
+          }
+        }));
+      });
+
+      scene.onBeforeRenderObservable.add(()=>{
+        if(gameState.heldItem){
+          const dist = BABYLON.Vector3.Distance(gameState.heldItem.getAbsolutePosition(), shop.till.getAbsolutePosition());
+          if(dist < 1.2 && !gameState.processingSale){
+            gameState.processingSale = true;
+            const price = gameState.heldItem.metadata.price;
+            showMessage("That'll be " + price + " coins, please!");
+            if(gameState.coins >= price){
+              gameState.coins -= price;
+              updateCoinsUI();
+              showMessage("Purchased!");
+              gameState.heldItem.dispose();
+              gameState.heldItem = null;
+            } else {
+              showMessage("You don't have enough coins.");
+              gameState.heldItem.setParent(shop);
+              gameState.heldItem.position.set(-1 + gameState.heldItem.metadata.index*1, 1.2, 0);
+              gameState.heldItem = null;
+            }
+            setTimeout(()=>{gameState.processingSale=false;},1000);
+          }
+        }
+      });
+
+      updateCoinsUI();
+
+      return scene;
+    };
+
+    const scene = createScene();
+
+    engine.runRenderLoop(function () {
+      scene.render();
+    });
+
+    window.addEventListener('resize', function () {
+      engine.resize();
+    });
+  </script>
+</body>
+</html>
