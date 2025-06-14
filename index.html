@@ -199,12 +199,17 @@ t
       till.isPickable = false;
       till.parent = shop;
 
-      // simple shopkeeper behind the till
+      // shopkeeper behind the till
       const keeper = new BABYLON.TransformNode(name+'Keeper', scene);
-      const legs = BABYLON.MeshBuilder.CreateBox(name+'KeeperLegs', {width:0.6, depth:0.6, height:0.8}, scene);
-      legs.position.y = 0.4;
-      legs.material = mats.white;
-      legs.parent = keeper;
+      const leftLeg = BABYLON.MeshBuilder.CreateBox(name+'LeftLeg', {width:0.25, depth:0.25, height:0.8}, scene);
+      leftLeg.position.set(-0.15, 0.4, 0);
+      leftLeg.material = mats.white;
+      leftLeg.parent = keeper;
+
+      const rightLeg = BABYLON.MeshBuilder.CreateBox(name+'RightLeg', {width:0.25, depth:0.25, height:0.8}, scene);
+      rightLeg.position.set(0.15, 0.4, 0);
+      rightLeg.material = mats.white;
+      rightLeg.parent = keeper;
 
       const body = BABYLON.MeshBuilder.CreateBox(name+'KeeperBody', {width:0.7, depth:0.4, height:0.8}, scene);
       body.position.y = 0.8 + 0.4;
@@ -216,10 +221,41 @@ t
       head.material = mats.white;
       head.parent = keeper;
 
+      const leftEye = BABYLON.MeshBuilder.CreateSphere(name+'LeftEye', {diameter:0.05}, scene);
+      leftEye.position.set(-0.1, 0.05, 0.25);
+      leftEye.material = mats.black;
+      leftEye.parent = head;
+
+      const rightEye = leftEye.clone(name+'RightEye');
+      rightEye.position.x = 0.1;
+
+      const mouth = BABYLON.MeshBuilder.CreateBox(name+'Mouth', {width:0.15, height:0.05, depth:0.02}, scene);
+      mouth.position.set(0, -0.08, 0.25);
+      mouth.material = mats.black;
+      mouth.parent = head;
+
       const hair = BABYLON.MeshBuilder.CreateBox(name+'KeeperHair', {width:0.5, depth:0.5, height:0.2}, scene);
       hair.position.y = head.position.y + 0.25;
       hair.material = mats.black;
       hair.parent = keeper;
+
+      const leftArm = BABYLON.MeshBuilder.CreateBox(name+'LeftArm', {width:0.2, depth:0.2, height:0.8}, scene);
+      leftArm.position.set(-0.45, 1.2, 0);
+      leftArm.material = mats.white;
+      leftArm.parent = keeper;
+
+      const rightArm = BABYLON.MeshBuilder.CreateBox(name+'RightArm', {width:0.2, depth:0.2, height:0.8}, scene);
+      rightArm.position.set(0.45, 1.2, 0);
+      rightArm.material = mats.white;
+      rightArm.parent = keeper;
+
+      const leftHand = BABYLON.MeshBuilder.CreateSphere(name+'LeftHand', {diameter:0.2}, scene);
+      leftHand.position.set(0, -0.4, 0);
+      leftHand.material = mats.white;
+      leftHand.parent = leftArm;
+
+      const rightHand = leftHand.clone(name+'RightHand');
+      rightHand.parent = rightArm;
 
       keeper.position.set(0, 0, size/2 - 1.3);
       keeper.parent = shop;
