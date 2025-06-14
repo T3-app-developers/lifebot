@@ -12,23 +12,26 @@
       overflow: hidden;
     }
     #renderCanvas { width: 100%; height: 100%; }
-#ui {
-  position: absolute;
-  top: 10px;
-  left: 10px;
-  color: white;
-  font-family: sans-serif;
-  background: rgba(0,0,0,0.5);
-  padding: 4px 8px;
-  border-radius: 4px;
-}
+
+    #ui {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      color: white;
+      font-family: sans-serif;
+      background: rgba(0,0,0,0.5);
+      padding: 4px 8px;
+      border-radius: 4px;
+    }
 
   </style>
   <script src="https://cdn.babylonjs.com/babylon.js"></script>
 </head>
 <body>
   <canvas id="renderCanvas"></canvas>
-<div id="ui">Coins: <span id="coinCount">0</span></div>
+
+  <div id="ui">Coins: <span id="coinCount">0</span></div>
+  <div id="message" style="display:none;position:absolute;top:40px;left:10px;color:white;font-family:sans-serif;background:rgba(0,0,0,0.7);padding:4px 8px;border-radius:4px;"></div>
 
   <script>
     const canvas = document.getElementById('renderCanvas');
@@ -36,13 +39,19 @@
 
     const gameState = { coins: 10, heldItem: null };
     const coinEl = document.getElementById('coinCount');
+
+    const messageEl = document.getElementById('message');
     function updateCoinsUI(){
       coinEl.textContent = gameState.coins;
     }
+    function showMessage(msg){
+      messageEl.textContent = msg;
+      messageEl.style.display = 'block';
+      clearTimeout(showMessage._t);
+      showMessage._t = setTimeout(()=>{messageEl.style.display='none';}, 2000);
+    }
 
     function buildHouse(name, x, scene, mats) {
-
-    function buildHouse(name, x, scene) {
 
       const house = new BABYLON.TransformNode(name, scene);
       const size = 4;
@@ -53,7 +62,7 @@
 
       const floor = BABYLON.MeshBuilder.CreateBox(name+'Floor', {width:size, depth:size, height:t}, scene);
       floor.position.y = t/2;
-
+t
       floor.material = mats.brick;
 
       floor.parent = house;
@@ -74,7 +83,7 @@
 
       const left = BABYLON.MeshBuilder.CreateBox(name+'Left', {width:t, height:height, depth:size}, scene);
       left.position.set(-size/2 + t/2, height/2, 0);
-t
+
       left.material = mats.brick;
 
       left.parent = house;
@@ -98,7 +107,7 @@ t
       frontRight.position.set(doorWidth/2 + sideWidth/2, height/2, size/2 - t/2);
 
       frontRight.material = mats.brick;
-    
+
       frontRight.parent = house;
 
       const topH = height - doorHeight;
@@ -164,11 +173,36 @@ t
 
     function buildShop(name, position, scene, mats) {
       const shop = new BABYLON.TransformNode(name, scene);
-      const box = BABYLON.MeshBuilder.CreateBox(name+'Box', {size:4, height:3}, scene);
+
+      const size = 4;
+      const box = BABYLON.MeshBuilder.CreateBox(name+'Box', {width:size, depth:size, height:3}, scene);
       box.position.y = 1.5;
       box.material = mats.brick;
       box.parent = shop;
+
+      // create items on a simple shelf
+      const items = [];
+      for(let i=0;i<3;i++){
+        const itm = BABYLON.MeshBuilder.CreateSphere(name+'Item'+i, {diameter:0.5}, scene);
+        itm.position.set(-1 + i*1, 1.2, 0);
+        itm.material = mats.metal;
+        itm.isPickable = true;
+        itm.metadata = {price:5+i*2, index:i};
+        itm.parent = shop;
+        items.push(itm);
+      }
+
+      // checkout till
+      const till = BABYLON.MeshBuilder.CreateBox(name+'Till', {width:1.5, depth:1, height:1}, scene);
+      till.position.set(0,0.5,size/2 - 0.6);
+      till.material = mats.metal;
+      till.isPickable = false;
+      till.parent = shop;
+
       shop.position.copyFrom(position);
+      shop.items = items;
+      shop.till = till;
+
       return shop;
     }
 
@@ -209,7 +243,43 @@ t
       buildHouse('house2', 0, scene, mats);
       buildHouse('house3', 6, scene, mats);
 
-      buildShop('shop', new BABYLON.Vector3(0, 0, 8), scene, mats);
+
+      const shop = buildShop('shop', new BABYLON.Vector3(0, 0, 8), scene, mats);
+      shop.items.forEach(item => {
+        item.actionManager = new BABYLON.ActionManager(scene);
+        item.actionManager.registerAction(new BABYLON.ExecuteCodeAction(BABYLON.ActionManager.OnPickTrigger, function(){
+          if(!gameState.heldItem){
+            gameState.heldItem = item;
+            item.setParent(camera);
+            item.position.set(0.5, -0.5, 1);
+          }
+        }));
+      });
+
+      scene.onBeforeRenderObservable.add(()=>{
+        if(gameState.heldItem){
+          const dist = BABYLON.Vector3.Distance(gameState.heldItem.getAbsolutePosition(), shop.till.getAbsolutePosition());
+          if(dist < 1.2 && !gameState.processingSale){
+            gameState.processingSale = true;
+            const price = gameState.heldItem.metadata.price;
+            showMessage("That'll be " + price + " coins, please!");
+            if(gameState.coins >= price){
+              gameState.coins -= price;
+              updateCoinsUI();
+              showMessage("Purchased!");
+              gameState.heldItem.dispose();
+              gameState.heldItem = null;
+            } else {
+              showMessage("You don't have enough coins.");
+              gameState.heldItem.setParent(shop);
+              gameState.heldItem.position.set(-1 + gameState.heldItem.metadata.index*1, 1.2, 0);
+              gameState.heldItem = null;
+            }
+            setTimeout(()=>{gameState.processingSale=false;},1000);
+          }
+        }
+      });
+
 
       updateCoinsUI();
 
