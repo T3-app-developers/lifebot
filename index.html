@@ -198,9 +198,71 @@
       till.isPickable = false;
       till.parent = shop;
 
+      // shopkeeper behind the till
+      const keeper = new BABYLON.TransformNode(name+'Keeper', scene);
+      const leftLeg = BABYLON.MeshBuilder.CreateBox(name+'LeftLeg', {width:0.25, depth:0.25, height:0.8}, scene);
+      leftLeg.position.set(-0.15, 0.4, 0);
+      leftLeg.material = mats.white;
+      leftLeg.parent = keeper;
+
+      const rightLeg = BABYLON.MeshBuilder.CreateBox(name+'RightLeg', {width:0.25, depth:0.25, height:0.8}, scene);
+      rightLeg.position.set(0.15, 0.4, 0);
+      rightLeg.material = mats.white;
+      rightLeg.parent = keeper;
+
+      const body = BABYLON.MeshBuilder.CreateBox(name+'KeeperBody', {width:0.7, depth:0.4, height:0.8}, scene);
+      body.position.y = 0.8 + 0.4;
+      body.material = mats.black;
+      body.parent = keeper;
+
+      const head = BABYLON.MeshBuilder.CreateSphere(name+'KeeperHead', {diameter:0.5}, scene);
+      head.position.y = 0.8 + 0.4 + 0.4;
+      head.material = mats.white;
+      head.parent = keeper;
+
+      const leftEye = BABYLON.MeshBuilder.CreateSphere(name+'LeftEye', {diameter:0.05}, scene);
+      leftEye.position.set(-0.1, 0.05, 0.25);
+      leftEye.material = mats.black;
+      leftEye.parent = head;
+
+      const rightEye = leftEye.clone(name+'RightEye');
+      rightEye.position.x = 0.1;
+
+      const mouth = BABYLON.MeshBuilder.CreateBox(name+'Mouth', {width:0.15, height:0.05, depth:0.02}, scene);
+      mouth.position.set(0, -0.08, 0.25);
+      mouth.material = mats.black;
+      mouth.parent = head;
+
+      const hair = BABYLON.MeshBuilder.CreateBox(name+'KeeperHair', {width:0.5, depth:0.5, height:0.2}, scene);
+      hair.position.y = head.position.y + 0.25;
+      hair.material = mats.black;
+      hair.parent = keeper;
+
+      const leftArm = BABYLON.MeshBuilder.CreateBox(name+'LeftArm', {width:0.2, depth:0.2, height:0.8}, scene);
+      leftArm.position.set(-0.45, 1.2, 0);
+      leftArm.material = mats.white;
+      leftArm.parent = keeper;
+
+      const rightArm = BABYLON.MeshBuilder.CreateBox(name+'RightArm', {width:0.2, depth:0.2, height:0.8}, scene);
+      rightArm.position.set(0.45, 1.2, 0);
+      rightArm.material = mats.white;
+      rightArm.parent = keeper;
+
+      const leftHand = BABYLON.MeshBuilder.CreateSphere(name+'LeftHand', {diameter:0.2}, scene);
+      leftHand.position.set(0, -0.4, 0);
+      leftHand.material = mats.white;
+      leftHand.parent = leftArm;
+
+      const rightHand = leftHand.clone(name+'RightHand');
+      rightHand.parent = rightArm;
+
+      keeper.position.set(0, 0, size/2 - 1.3);
+      keeper.parent = shop;
+
       shop.position.copyFrom(position);
       shop.items = items;
       shop.till = till;
+      shop.keeperHead = head;
 
       return shop;
     }
@@ -221,7 +283,13 @@
       waterMat.diffuseColor = new BABYLON.Color3(0.3, 0.3, 1);
       waterMat.alpha = 0.7;
 
-      const mats = { brick: brickMat, metal: metalMat, water: waterMat, ground: groundMat };
+      const blackMat = new BABYLON.StandardMaterial('blackMat', scene);
+      blackMat.diffuseColor = new BABYLON.Color3(0,0,0);
+
+      const whiteMat = new BABYLON.StandardMaterial('whiteMat', scene);
+      whiteMat.diffuseColor = new BABYLON.Color3(1,1,1);
+
+      const mats = { brick: brickMat, metal: metalMat, water: waterMat, ground: groundMat, black: blackMat, white: whiteMat };
 
       const camera = new BABYLON.UniversalCamera('player', new BABYLON.Vector3(0, 1.7, -10), scene);
       camera.attachControl(canvas, true);
@@ -262,6 +330,10 @@
         }));
       });
 
+      const lookAngles = [Math.PI/4, -Math.PI/4, 0];
+      let lookIndex = 0;
+      setInterval(()=>{lookIndex = (lookIndex + 1) % lookAngles.length;}, 2000);
+
       scene.onBeforeRenderObservable.add(()=>{
         if(gameState.heldItem){
           const dist = BABYLON.Vector3.Distance(gameState.heldItem.getAbsolutePosition(), shop.till.getAbsolutePosition());
@@ -283,6 +355,13 @@
             }
             setTimeout(()=>{gameState.processingSale=false;},1000);
           }
+        }
+
+        if(lookAngles[lookIndex] === 0){
+          const hp = shop.keeperHead.getAbsolutePosition();
+          shop.keeperHead.rotation.y = Math.atan2(camera.position.x - hp.x, camera.position.z - hp.z);
+        } else {
+          shop.keeperHead.rotation.y = lookAngles[lookIndex];
         }
       });
 
