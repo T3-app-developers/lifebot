@@ -242,15 +242,12 @@
       buildHouse('house2', 0, scene, mats);
       buildHouse('house3', 6, scene, mats);
 
-      BABYLON.SceneLoader.ImportMesh(
-        "", "assets/", "brio_psx_style_han66st.glb",
-        scene,
-        meshes => {
-          const car = meshes[0];
-          car.position.set(0, 0, 5); // adjust as desired
-        }
-      );
-
+      // load car model
+      BABYLON.SceneLoader.ImportMesh("", "assets/", "brio_psx_style_han66st.glb", scene, function(meshes){
+        const car = meshes[0];
+        car.position.set(-2, 0, 4);
+        car.scaling.scaleInPlace(0.75);
+      });
 
       const shop = buildShop('shop', new BABYLON.Vector3(0, 0, 8), scene, mats);
       shop.items.forEach(item => {
