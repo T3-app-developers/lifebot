@@ -205,6 +205,138 @@
       return shop;
     }
 
+    function buildFlameBot(name, scene) {
+      const bot = new BABYLON.TransformNode(name, scene);
+
+      const box = BABYLON.MeshBuilder.CreateBox(name + 'Body', {size: 2}, scene);
+      box.position.y = 1;
+      const boxMat = new BABYLON.StandardMaterial(name + 'BodyMat', scene);
+      boxMat.diffuseColor = new BABYLON.Color3(1, 0, 0);
+      box.material = boxMat;
+      box.parent = bot;
+
+      function createArm(n, x, y, z, rx, ry, rz) {
+        const arm = BABYLON.MeshBuilder.CreateCylinder(n, {
+          height: 1.5,
+          diameterTop: 0.2,
+          diameterBottom: 0.2,
+          tessellation: 12
+        }, scene);
+        arm.position = new BABYLON.Vector3(x, y, z);
+        arm.rotation = new BABYLON.Vector3(rx, ry, rz);
+        const mat = new BABYLON.StandardMaterial(n + 'Mat', scene);
+        mat.diffuseColor = new BABYLON.Color3(0.8, 0.6, 0.4);
+        arm.material = mat;
+        arm.parent = bot;
+        return arm;
+      }
+
+      function createFlamethrower(parentArm) {
+        const barrel = BABYLON.MeshBuilder.CreateCylinder('barrel', {
+          height: 1,
+          diameterTop: 0.1,
+          diameterBottom: 0.1,
+          tessellation: 12
+        }, scene);
+        barrel.parent = parentArm;
+        barrel.position = new BABYLON.Vector3(0.6, -0.2, 0.1);
+        barrel.rotation = new BABYLON.Vector3(0, 0, Math.PI / 2);
+        const barrelMat = new BABYLON.StandardMaterial('barrelMat', scene);
+        barrelMat.diffuseColor = new BABYLON.Color3(0.2, 0.2, 0.2);
+        barrel.material = barrelMat;
+
+        const tank = BABYLON.MeshBuilder.CreateBox('tank', {size: 0.4}, scene);
+        tank.parent = parentArm;
+        tank.position = new BABYLON.Vector3(0.2, -0.4, -0.1);
+        const tankMat = new BABYLON.StandardMaterial('tankMat', scene);
+        tankMat.diffuseColor = new BABYLON.Color3(0.1, 0.1, 0.1);
+        tank.material = tankMat;
+
+        const fire = new BABYLON.ParticleSystem('fire', 2000, scene);
+        fire.particleTexture = new BABYLON.Texture('https://assets.babylonjs.com/particles/flare.png', scene);
+        fire.emitter = barrel;
+        fire.minEmitBox = new BABYLON.Vector3(0.5, 0, 0);
+        fire.maxEmitBox = new BABYLON.Vector3(0.6, 0, 0);
+        fire.color1 = new BABYLON.Color4(1, 0.5, 0, 1);
+        fire.color2 = new BABYLON.Color4(1, 0.2, 0, 1);
+        fire.minSize = 0.1;
+        fire.maxSize = 0.3;
+        fire.minLifeTime = 0.2;
+        fire.maxLifeTime = 0.5;
+        fire.emitRate = 500;
+        fire.direction1 = new BABYLON.Vector3(1, 0, 0);
+        fire.direction2 = new BABYLON.Vector3(1, 0.2, 0);
+        fire.gravity = new BABYLON.Vector3(0, -1, 0);
+        fire.start();
+      }
+
+      const leftArm = createArm('leftArm', -1.1, 1.5, 0, 0, 0, Math.PI / 2);
+      const rightArm = createArm('rightArm', 1.1, 1.5, 0, 0, 0, Math.PI / 2);
+      createFlamethrower(rightArm);
+
+      function createLeg(n, x, y, z) {
+        const leg = BABYLON.MeshBuilder.CreateCylinder(n, {
+          height: 2,
+          diameterTop: 0.3,
+          diameterBottom: 0.3,
+          tessellation: 12
+        }, scene);
+        leg.position = new BABYLON.Vector3(x, y, z);
+        const legMat = new BABYLON.StandardMaterial(n + 'Mat', scene);
+        legMat.diffuseColor = new BABYLON.Color3(0.8, 0.6, 0.4);
+        leg.material = legMat;
+        leg.parent = bot;
+      }
+      createLeg('leftLeg', -0.5, 0, 0);
+      createLeg('rightLeg', 0.5, 0, 0);
+
+      function createEye(n, x, y, z) {
+        const eye = BABYLON.MeshBuilder.CreateSphere(n, {diameter: 0.3}, scene);
+        eye.position = new BABYLON.Vector3(x, y, z);
+        const eyeMat = new BABYLON.StandardMaterial(n + 'Mat', scene);
+        eyeMat.diffuseColor = new BABYLON.Color3(1, 1, 1);
+        eye.material = eyeMat;
+        eye.parent = bot;
+
+        const pupil = BABYLON.MeshBuilder.CreateSphere(n + 'Pupil', {diameter: 0.15}, scene);
+        pupil.position = new BABYLON.Vector3(x, y, z + 0.18);
+        const pMat = new BABYLON.StandardMaterial(n + 'PupilMat', scene);
+        pMat.diffuseColor = new BABYLON.Color3(0, 0, 0);
+        pupil.material = pMat;
+        pupil.parent = bot;
+
+        const laser = BABYLON.MeshBuilder.CreateCylinder(n + 'Laser', {
+          height: 5,
+          diameterTop: 0.05,
+          diameterBottom: 0.05,
+          tessellation: 6
+        }, scene);
+        laser.parent = eye;
+        laser.position = new BABYLON.Vector3(0, 0, 2.5);
+        laser.rotation.x = Math.PI / 2;
+        const laserMat = new BABYLON.StandardMaterial(n + 'LaserMat', scene);
+        laserMat.emissiveColor = new BABYLON.Color3(1, 0, 0);
+        laser.material = laserMat;
+      }
+      createEye('leftEye', -0.5, 1.25, 1.01);
+      createEye('rightEye', 0.5, 1.25, 1.01);
+
+      const mouth = BABYLON.MeshBuilder.CreateTorus('mouth', {
+        diameter: 0.8,
+        thickness: 0.08,
+        tessellation: 32
+      }, scene);
+      mouth.position = new BABYLON.Vector3(0, 0.85, 1.01);
+      mouth.rotation.x = Math.PI / 2;
+      mouth.rotation.z = Math.PI;
+      const mouthMat = new BABYLON.StandardMaterial('mouthMat', scene);
+      mouthMat.diffuseColor = new BABYLON.Color3(0, 0, 0);
+      mouth.material = mouthMat;
+      mouth.parent = bot;
+
+      return bot;
+    }
+
     const createScene = function() {
       const scene = new BABYLON.Scene(engine);
 
@@ -261,6 +393,9 @@
           }
         }));
       });
+
+      const bot = buildFlameBot('bot', scene);
+      bot.position.set(shop.position.x + 3, 0, shop.position.z);
 
       scene.onBeforeRenderObservable.add(()=>{
         if(gameState.heldItem){
