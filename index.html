@@ -24,6 +24,34 @@
       border-radius: 4px;
     }
 
+    .elevator-panel {
+      position: absolute;
+      bottom: 20px;
+      left: 20px;
+      background: rgba(0,0,0,0.5);
+      padding: 10px;
+      border-radius: 8px;
+      color: white;
+      font-family: sans-serif;
+    }
+    .elevator-panel button {
+      margin: 4px;
+      padding: 6px 12px;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    .level-label {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      background: rgba(255,255,255,0.8);
+      padding: 6px 12px;
+      border-radius: 6px;
+      font-family: sans-serif;
+      font-weight: bold;
+    }
+
   </style>
   <script src="https://cdn.babylonjs.com/babylon.js"></script>
 </head>
@@ -32,6 +60,13 @@
 
   <div id="ui">Coins: <span id="coinCount">0</span></div>
   <div id="message" style="display:none;position:absolute;top:40px;left:10px;color:white;font-family:sans-serif;background:rgba(0,0,0,0.7);padding:4px 8px;border-radius:4px;"></div>
+  <div class="level-label" id="levelLabel">Level 1</div>
+  <div class="elevator-panel" id="elevatorPanel">
+    <div>Elevator:</div>
+    <button data-target="1">1</button>
+    <button data-target="2">2</button>
+    <button data-target="3">3</button>
+  </div>
 
   <script>
     const canvas = document.getElementById('renderCanvas');
@@ -337,6 +372,178 @@
       return bot;
     }
 
+    function buildSkyscraper(scene, camera) {
+      const STORY_HEIGHT = 3;
+      const LEVEL_POSITIONS = {
+        1: new BABYLON.Vector3(0, 1.5, 0),
+        2: new BABYLON.Vector3(0, STORY_HEIGHT + 1.5, 0),
+        3: new BABYLON.Vector3(0, STORY_HEIGHT * 2 + 1.5, 0)
+      };
+      const root = new BABYLON.TransformNode('skyscraper', scene);
+
+      const whiteMat = new BABYLON.StandardMaterial('whiteMat', scene);
+      whiteMat.diffuseColor = new BABYLON.Color3(1, 1, 1);
+
+      const building = BABYLON.MeshBuilder.CreateBox('building', {height: STORY_HEIGHT * 6, width: 10, depth: 10}, scene);
+      building.position.y = (STORY_HEIGHT * 6) / 2;
+      building.material = whiteMat;
+      building.isPickable = false;
+      building.checkCollisions = false;
+      building.parent = root;
+
+      for (let i = 0; i < 6; i++) {
+        const floor = BABYLON.MeshBuilder.CreateBox(`floor${i + 1}`, {width: 9.8, depth: 9.8, height: 0.1}, scene);
+        floor.position.y = i * STORY_HEIGHT + 0.05;
+        floor.material = whiteMat;
+        floor.checkCollisions = true;
+        floor.parent = root;
+      }
+
+      for (let i = 0; i < 3; i++) {
+        const ceiling = BABYLON.MeshBuilder.CreateBox(`ceiling${i + 1}`, {width: 9.8, depth: 9.8, height: 0.1}, scene);
+        ceiling.position.y = i * STORY_HEIGHT + STORY_HEIGHT - 0.05;
+        ceiling.material = whiteMat;
+        ceiling.checkCollisions = true;
+        ceiling.parent = root;
+      }
+
+      const blueMat = new BABYLON.StandardMaterial('blueMat', scene);
+      blueMat.diffuseColor = new BABYLON.Color3(0.1, 0.4, 1);
+      const doorFrame = BABYLON.MeshBuilder.CreateBox('frontDoorFrame', {width: 2, height: 2.5, depth: 0.2}, scene);
+      doorFrame.position = new BABYLON.Vector3(0, 1.25, 5.1);
+      doorFrame.material = blueMat;
+      doorFrame.parent = root;
+
+      const blackMat = new BABYLON.StandardMaterial('blackMat', scene);
+      blackMat.diffuseColor = new BABYLON.Color3(0, 0, 0);
+      const midLine = BABYLON.MeshBuilder.CreateBox('doorLine', {width: 0.1, height: 2.5, depth: 0.25}, scene);
+      midLine.position = new BABYLON.Vector3(0, 1.25, 5.2);
+      midLine.material = blackMat;
+      midLine.parent = root;
+
+      const shaft = BABYLON.MeshBuilder.CreateBox('shaft', {width: 2, height: STORY_HEIGHT * 3 + 0.1, depth: 2}, scene);
+      shaft.position.y = (STORY_HEIGHT * 3) / 2;
+      shaft.position.x = 3;
+      const shaftMat = new BABYLON.StandardMaterial('shaftMat', scene);
+      shaftMat.alpha = 0.1;
+      shaft.material = shaftMat;
+      shaft.isPickable = false;
+      shaft.parent = root;
+
+      const elevatorPad = BABYLON.MeshBuilder.CreateBox('elevatorPad', {width: 1.5, depth: 1.5, height: 0.1}, scene);
+      elevatorPad.position = new BABYLON.Vector3(3, 1.5, 0);
+      const padMat = new BABYLON.StandardMaterial('padMat', scene);
+      padMat.diffuseColor = new BABYLON.Color3(0.6, 0.6, 0.6);
+      elevatorPad.material = padMat;
+      elevatorPad.checkCollisions = false;
+      elevatorPad.parent = root;
+
+      const panel = BABYLON.MeshBuilder.CreatePlane('panel', {width: 0.6, height: 1}, scene);
+      panel.position = new BABYLON.Vector3(2.2, 1.5, 0);
+      panel.rotation.y = Math.PI / 2;
+      const panelMat = new BABYLON.StandardMaterial('panelMat', scene);
+      panelMat.emissiveColor = new BABYLON.Color3(0.1, 0.1, 0.1);
+      panel.material = panelMat;
+      panel.parent = root;
+
+      function createLevel1Contents() {
+        const desk = BABYLON.MeshBuilder.CreateBox('desk1', {width: 2, depth: 1, height: 0.2}, scene);
+        desk.position = new BABYLON.Vector3(-2, 1, 2);
+        desk.parent = root;
+        const leg1 = BABYLON.MeshBuilder.CreateBox('deskLeg1', {width: 0.2, depth: 0.2, height: 1}, scene);
+        leg1.position = new BABYLON.Vector3(-3, 0.5, 2);
+        leg1.parent = root;
+        const leg2 = leg1.clone('deskLeg2');
+        leg2.position.x = -1;
+        const chair = BABYLON.MeshBuilder.CreateCylinder('chair1', {diameter: 0.8, height: 0.5}, scene);
+        chair.position = new BABYLON.Vector3(-2, 0.5, 1);
+        chair.parent = root;
+      }
+
+      function createLevel2Contents() {
+        const glassMat = new BABYLON.StandardMaterial('glass', scene);
+        glassMat.alpha = 0.2;
+        glassMat.diffuseColor = new BABYLON.Color3(0.4, 0.7, 1);
+        glassMat.specularColor = new BABYLON.Color3(1, 1, 1);
+        const window2 = BABYLON.MeshBuilder.CreatePlane('window2', {width: 6, height: 3}, scene);
+        window2.position = new BABYLON.Vector3(0, STORY_HEIGHT + 1.5, -4.9);
+        window2.material = glassMat;
+        window2.parent = root;
+
+        const counter = BABYLON.MeshBuilder.CreateBox('kitchenCounter2', {width: 2.5, depth: 1, height: 1}, scene);
+        counter.position = new BABYLON.Vector3(3, STORY_HEIGHT + 0.5, -3);
+        counter.parent = root;
+        const stove = BABYLON.MeshBuilder.CreateBox('stove2', {width: 1, depth: 1, height: 0.5}, scene);
+        stove.position = new BABYLON.Vector3(3, STORY_HEIGHT + 0.75, -1.5);
+        stove.parent = root;
+
+        const bedBase = BABYLON.MeshBuilder.CreateBox('bed2', {width: 2, depth: 3, height: 0.5}, scene);
+        bedBase.position = new BABYLON.Vector3(-3, STORY_HEIGHT + 0.25, -3);
+        bedBase.parent = root;
+        const pillow = BABYLON.MeshBuilder.CreateBox('pillow2', {width: 1.8, depth: 0.5, height: 0.2}, scene);
+        pillow.position = new BABYLON.Vector3(-3, STORY_HEIGHT + 0.5, -1.5);
+        pillow.parent = root;
+
+        const couchBase = BABYLON.MeshBuilder.CreateBox('couch2', {width: 3, depth: 1, height: 1}, scene);
+        couchBase.position = new BABYLON.Vector3(-3, STORY_HEIGHT + 0.5, 2);
+        couchBase.parent = root;
+        const cushion = BABYLON.MeshBuilder.CreateBox('cushion2', {width: 2.8, depth: 0.8, height: 0.4}, scene);
+        cushion.position = new BABYLON.Vector3(-3, STORY_HEIGHT + 0.7, 2);
+        cushion.parent = root;
+      }
+
+      function createLevel3Contents() {
+        const glassMat3 = new BABYLON.StandardMaterial('glass3', scene);
+        glassMat3.alpha = 0.2;
+        glassMat3.diffuseColor = new BABYLON.Color3(0.4, 0.7, 1);
+        glassMat3.specularColor = new BABYLON.Color3(1, 1, 1);
+        const window3 = BABYLON.MeshBuilder.CreatePlane('window3', {width: 6, height: 3}, scene);
+        window3.position = new BABYLON.Vector3(0, STORY_HEIGHT * 2 + 1.5, -4.9);
+        window3.material = glassMat3;
+        window3.parent = root;
+
+        const desk3 = BABYLON.MeshBuilder.CreateBox('desk3', {width: 2.5, depth: 1.2, height: 0.3}, scene);
+        desk3.position = new BABYLON.Vector3(-3, STORY_HEIGHT * 2 + 1.2, 2);
+        desk3.parent = root;
+        const chair3 = BABYLON.MeshBuilder.CreateBox('officeChair3', {width: 1, depth: 1, height: 1.5}, scene);
+        chair3.position = new BABYLON.Vector3(-3, STORY_HEIGHT * 2 + 0.75, 0.5);
+        chair3.parent = root;
+        const monitor = BABYLON.MeshBuilder.CreateBox('monitor3', {width: 1, depth: 0.1, height: 0.6}, scene);
+        monitor.position = new BABYLON.Vector3(-3, STORY_HEIGHT * 2 + 1.5, 2);
+        monitor.parent = root;
+        const keyboard = BABYLON.MeshBuilder.CreateBox('keyboard3', {width: 1.5, depth: 0.2, height: 0.05}, scene);
+        keyboard.position = new BABYLON.Vector3(-3, STORY_HEIGHT * 2 + 1.05, 1.5);
+        keyboard.parent = root;
+
+        const counter3 = BABYLON.MeshBuilder.CreateBox('kitchenCounter3', {width: 2, depth: 1, height: 1}, scene);
+        counter3.position = new BABYLON.Vector3(3, STORY_HEIGHT * 2 + 0.5, -3);
+        counter3.parent = root;
+        const stove3 = BABYLON.MeshBuilder.CreateBox('stove3', {width: 1, depth: 1, height: 0.5}, scene);
+        stove3.position = new BABYLON.Vector3(3, STORY_HEIGHT * 2 + 0.75, -1.5);
+        stove3.parent = root;
+      }
+
+      createLevel1Contents();
+      createLevel2Contents();
+      createLevel3Contents();
+
+      function teleportToLevel(lvl) {
+        const target = LEVEL_POSITIONS[lvl].add(root.position);
+        camera.position = target.clone();
+        document.getElementById('levelLabel').innerText = `Level ${lvl}`;
+      }
+
+      document.querySelectorAll('.elevator-panel button').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const lvl = parseInt(btn.dataset.target);
+          teleportToLevel(lvl);
+        });
+      });
+
+      root.position = new BABYLON.Vector3(20, 0, 32);
+      teleportToLevel(1);
+    }
+
     const createScene = function() {
     const scene = new BABYLON.Scene(engine);
 
@@ -385,6 +592,8 @@
       buildHouse('house1', -6, scene, mats);
       buildHouse('house2', 0, scene, mats);
       buildHouse('house3', 6, scene, mats);
+
+      buildSkyscraper(scene, camera);
 
       // load car model and place it behind the houses
       BABYLON.SceneLoader.ImportMesh("", "assets/", "brio_psx_style_han66st.glb", scene, function(meshes){
