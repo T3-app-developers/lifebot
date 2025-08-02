@@ -338,22 +338,25 @@
     }
 
     const createScene = function() {
-      const scene = new BABYLON.Scene(engine);
+    const scene = new BABYLON.Scene(engine);
 
-      const groundMat = new BABYLON.StandardMaterial('groundMat', scene);
-      groundMat.diffuseColor = new BABYLON.Color3(0.2, 0.8, 0.2);
+    const groundMat = new BABYLON.StandardMaterial('groundMat', scene);
+    groundMat.diffuseColor = new BABYLON.Color3(0.2, 0.8, 0.2);
 
-      const brickMat = new BABYLON.StandardMaterial('brickMat', scene);
-      brickMat.diffuseColor = new BABYLON.Color3(0.8, 0.3, 0.3);
+    const brickMat = new BABYLON.StandardMaterial('brickMat', scene);
+    brickMat.diffuseColor = new BABYLON.Color3(0.8, 0.3, 0.3);
 
-      const metalMat = new BABYLON.StandardMaterial('metalMat', scene);
-      metalMat.diffuseColor = new BABYLON.Color3(0.8, 0.8, 0.8);
+    const metalMat = new BABYLON.StandardMaterial('metalMat', scene);
+    metalMat.diffuseColor = new BABYLON.Color3(0.8, 0.8, 0.8);
 
-      const waterMat = new BABYLON.StandardMaterial('waterMat', scene);
-      waterMat.diffuseColor = new BABYLON.Color3(0.3, 0.3, 1);
-      waterMat.alpha = 0.7;
+    const waterMat = new BABYLON.StandardMaterial('waterMat', scene);
+    waterMat.diffuseColor = new BABYLON.Color3(0.3, 0.3, 1);
+    waterMat.alpha = 0.7;
 
-      const mats = { brick: brickMat, metal: metalMat, water: waterMat, ground: groundMat };
+    const sandMat = new BABYLON.StandardMaterial('sandMat', scene);
+    sandMat.diffuseColor = new BABYLON.Color3(0.94, 0.86, 0.67);
+
+    const mats = { brick: brickMat, metal: metalMat, water: waterMat, ground: groundMat, sand: sandMat };
 
       const camera = new BABYLON.UniversalCamera('player', new BABYLON.Vector3(0, 1.7, -10), scene);
       camera.attachControl(canvas, true);
@@ -365,10 +368,19 @@
         }
       };
 
-      new BABYLON.HemisphericLight('light', new BABYLON.Vector3(0, 1, 0), scene);
+    new BABYLON.HemisphericLight('light', new BABYLON.Vector3(0, 1, 0), scene);
 
-      const ground = BABYLON.MeshBuilder.CreateGround('ground', {width:40, height:20}, scene);
-      ground.material = groundMat;
+    const ocean = BABYLON.MeshBuilder.CreateGround('ocean', {width:3600, height:3600}, scene);
+    ocean.position.y = -0.1;
+    ocean.material = waterMat;
+
+    const beach = BABYLON.MeshBuilder.CreateGround('beach', {width:70, height:70}, scene);
+    beach.position.y = -0.05;
+    beach.material = sandMat;
+
+    const ground = BABYLON.MeshBuilder.CreateGround('ground', {width:60, height:60}, scene);
+    ground.position.y = 0;
+    ground.material = groundMat;
 
       buildHouse('house1', -6, scene, mats);
       buildHouse('house2', 0, scene, mats);
