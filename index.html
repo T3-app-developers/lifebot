@@ -54,6 +54,7 @@
 
   </style>
   <script src="https://cdn.babylonjs.com/babylon.js"></script>
+  <script src="stadium.js"></script>
 </head>
 <body>
   <canvas id="renderCanvas"></canvas>
@@ -675,6 +676,9 @@
         car.position.set(2, 0, -4);
         car.scaling.scaleInPlace(0.5);
       });
+
+      const stadium = createLifeBotStadium(scene);
+      stadium.root.position = new BABYLON.Vector3(40, 0, 60);
 
       const shop = buildShop('shop', new BABYLON.Vector3(0, 0, 8), scene, mats);
       shop.items.forEach(item => {
