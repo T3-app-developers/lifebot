@@ -565,6 +565,41 @@
 
     const mats = { brick: brickMat, metal: metalMat, water: waterMat, ground: groundMat, sand: sandMat };
 
+    function createTrafficLight(name, position){
+      const pole = BABYLON.MeshBuilder.CreateCylinder(name+'Pole', {diameter:0.2, height:3}, scene);
+      pole.position = new BABYLON.Vector3(position.x, 1.5, position.z);
+      pole.material = metalMat;
+
+      const box = BABYLON.MeshBuilder.CreateBox(name+'Box', {width:0.5, height:0.5, depth:0.5}, scene);
+      box.position = new BABYLON.Vector3(position.x, 2.5, position.z);
+      box.material = metalMat;
+
+      const redMat = new BABYLON.StandardMaterial(name+'RedMat', scene);
+      redMat.emissiveColor = new BABYLON.Color3(1, 0, 0);
+      const greenMat = new BABYLON.StandardMaterial(name+'GreenMat', scene);
+      greenMat.emissiveColor = new BABYLON.Color3(0, 0.3, 0);
+
+      const red = BABYLON.MeshBuilder.CreateSphere(name+'Red', {diameter:0.2}, scene);
+      red.position = new BABYLON.Vector3(position.x, 2.5, position.z+0.3);
+      red.material = redMat;
+
+      const green = BABYLON.MeshBuilder.CreateSphere(name+'Green', {diameter:0.2}, scene);
+      green.position = new BABYLON.Vector3(position.x, 2.1, position.z+0.3);
+      green.material = greenMat;
+
+      let state = 0;
+      setInterval(() => {
+        state = 1 - state;
+        if (state) {
+          redMat.emissiveColor.set(0.3, 0, 0);
+          greenMat.emissiveColor.set(0, 1, 0);
+        } else {
+          redMat.emissiveColor.set(1, 0, 0);
+          greenMat.emissiveColor.set(0, 0.3, 0);
+        }
+      }, 3000);
+    }
+
       const camera = new BABYLON.UniversalCamera('player', new BABYLON.Vector3(0, 1.7, -10), scene);
       camera.attachControl(canvas, true);
       camera.speed = 0.25;
@@ -589,11 +624,49 @@
     ground.position.y = 0;
     ground.material = groundMat;
 
+    const frontLot = BABYLON.MeshBuilder.CreateGround('frontLot', {width:60, height:80}, scene);
+    frontLot.position = new BABYLON.Vector3(20, 0, 75);
+    frontLot.material = groundMat;
+
+    const roadMat = new BABYLON.StandardMaterial('roadMat', scene);
+    roadMat.diffuseColor = new BABYLON.Color3(0.1, 0.1, 0.1);
+
       buildHouse('house1', -6, scene, mats);
       buildHouse('house2', 0, scene, mats);
       buildHouse('house3', 6, scene, mats);
 
       buildSkyscraper(scene, camera);
+
+      const roadFront = BABYLON.MeshBuilder.CreateGround('roadFront', {width:32, height:4}, scene);
+      roadFront.position = new BABYLON.Vector3(0, 0.01, 12);
+      roadFront.material = roadMat;
+
+      const roadBack = BABYLON.MeshBuilder.CreateGround('roadBack', {width:32, height:4}, scene);
+      roadBack.position = new BABYLON.Vector3(0, 0.01, -4);
+      roadBack.material = roadMat;
+
+      const roadLeft = BABYLON.MeshBuilder.CreateGround('roadLeft', {width:4, height:20}, scene);
+      roadLeft.position = new BABYLON.Vector3(-16, 0.01, 4);
+      roadLeft.material = roadMat;
+
+      const mainRoad = BABYLON.MeshBuilder.CreateGround('mainRoad', {width:4, height:150}, scene);
+      mainRoad.position = new BABYLON.Vector3(14, 0.01, 50);
+      mainRoad.material = roadMat;
+
+      const skyBack = BABYLON.MeshBuilder.CreateGround('skyBack', {width:12, height:4}, scene);
+      skyBack.position = new BABYLON.Vector3(20, 0.01, 25);
+      skyBack.material = roadMat;
+
+      const skyFront = BABYLON.MeshBuilder.CreateGround('skyFront', {width:12, height:4}, scene);
+      skyFront.position = new BABYLON.Vector3(20, 0.01, 39);
+      skyFront.material = roadMat;
+
+      const skyRight = BABYLON.MeshBuilder.CreateGround('skyRight', {width:4, height:14}, scene);
+      skyRight.position = new BABYLON.Vector3(26, 0.01, 32);
+      skyRight.material = roadMat;
+
+      createTrafficLight('tl1', new BABYLON.Vector3(14, 0, 12));
+      createTrafficLight('tl2', new BABYLON.Vector3(14, 0, 39));
 
       // load car model and place it behind the houses
       BABYLON.SceneLoader.ImportMesh("", "assets/", "brio_psx_style_han66st.glb", scene, function(meshes){
