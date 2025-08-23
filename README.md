@@ -8,6 +8,8 @@ A three-story skyscraper with an elevator has been added near the beach. Use the
 
 A new island sits a short distance offshore. An elevated road bridge arches over the water to connect it to the mainland, and the stadium now lives on this island with open space at its front.
 
+Beside the skyscraper on the mainland, a long wooden pier forms a small harbor. Flashing lights line the pier, a tall harbor crane stands near the shore end, and a red-and-white striped lighthouse with a rotating beacon caps the far end. You can walk inside the lighthouse and climb the spiral steps to the top.
+
 Additional assets live in the `assets/` directory. It currently includes `brio_psx_style_han66st.glb`, a low-poly PSX-style car model. The car is loaded in `index.html` using `BABYLON.SceneLoader.ImportMesh` and appears behind the houses when the game loads.
 
 To deploy on Netlify, push this repository and point your Netlify site at the repository root. No build step is required.
