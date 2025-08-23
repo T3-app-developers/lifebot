@@ -55,6 +55,7 @@
   </style>
   <script src="https://cdn.babylonjs.com/babylon.js"></script>
   <script src="stadium.js"></script>
+  <script type="module" src="cruise-ship-item.js"></script>
 </head>
 <body>
   <canvas id="renderCanvas"></canvas>
@@ -68,6 +69,8 @@
     <button data-target="2">2</button>
     <button data-target="3">3</button>
   </div>
+
+  <cruise-ship-item id="ship" scale="1" deck="ext" style="position:absolute;width:420px;height:300px;bottom:20px;right:20px;"></cruise-ship-item>
 
   <script>
     const canvas = document.getElementById('renderCanvas');
@@ -872,6 +875,14 @@
     window.addEventListener('resize', function () {
       engine.resize();
     });
+
+    const ship = document.getElementById('ship');
+    ship.addEventListener('pickup', e => showMessage('pickup: ' + e.detail.name));
+    ship.addEventListener('consume', e => showMessage('consume: ' + e.detail.name));
+    ship.addEventListener('door', e => showMessage(e.detail.open ? 'door opened' : 'door closed'));
+    ship.addEventListener('enter', () => showMessage('enter interior'));
+    ship.addEventListener('exit', () => showMessage('exit to exterior'));
+    ship.addEventListener('helm', () => showMessage('helm control'));
   </script>
 </body>
 </html>

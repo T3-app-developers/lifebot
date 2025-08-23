@@ -13,3 +13,5 @@ Beside the skyscraper on the mainland, a long wooden pier forms a small harbor. 
 Additional assets live in the `assets/` directory. It currently includes `brio_psx_style_han66st.glb`, a low-poly PSX-style car model. The car is loaded in `index.html` using `BABYLON.SceneLoader.ImportMesh` and appears behind the houses when the game loads.
 
 To deploy on Netlify, push this repository and point your Netlify site at the repository root. No build step is required.
+
+An interactive `<cruise-ship-item>` component now appears on the main page. Use its deck tabs to explore four interior levels and the bridge, pick up snacks from the café or promenade, and watch its events appear in the game's message UI.
