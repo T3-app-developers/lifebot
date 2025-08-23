@@ -597,11 +597,11 @@
 
       const bulb = BABYLON.MeshBuilder.CreateSphere('lhBulb',{diameter:0.5},scene);
       bulb.material = new BABYLON.StandardMaterial('lhBulbMat', scene);
-      bulb.material.emissiveColor = new BABYLON.Color3(1,1,0);
+      bulb.material.emissiveColor = new BABYLON.Color3(0.8,0.8,0);
       bulb.parent = pivot;
 
       const light = new BABYLON.SpotLight('lhLight', bulb.position, new BABYLON.Vector3(0,0,1), Math.PI/4, 2, scene);
-      light.intensity = 2;
+      light.intensity = 0.3;
       light.parent = pivot;
 
       scene.onBeforeRenderObservable.add(() => {
@@ -624,9 +624,10 @@
         const lamp = BABYLON.MeshBuilder.CreateBox('harborLamp'+i,{size:0.5},scene);
         lamp.position = new BABYLON.Vector3(-10,1,z);
         const mat = new BABYLON.StandardMaterial('harborLampMat'+i, scene);
-        mat.emissiveColor = new BABYLON.Color3(1,1,0);
+        mat.emissiveColor = new BABYLON.Color3(0.5,0.5,0);
         lamp.material = mat;
         const light = new BABYLON.PointLight('harborPoint'+i, new BABYLON.Vector3(-10,1,z), scene);
+        light.range = 20;
         const anim = new BABYLON.Animation(
           'harborFlash'+i,
           'intensity',
@@ -634,7 +635,7 @@
           BABYLON.Animation.ANIMATIONTYPE_FLOAT,
           BABYLON.Animation.ANIMATIONLOOPMODE_CYCLE
         );
-        anim.setKeys([{frame:0,value:0},{frame:15,value:1},{frame:30,value:0}]);
+        anim.setKeys([{frame:0,value:0},{frame:15,value:0.3},{frame:30,value:0}]);
         light.animations = [anim];
         scene.beginAnimation(light,0,30,true);
       }
