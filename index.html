@@ -658,6 +658,151 @@
       buildLighthouse(new BABYLON.Vector3(-10,0,startZ + pierLength), scene, mats);
     }
 
+    function buildCruiseShip(scene, camera, mats) {
+      const ship = new BABYLON.TransformNode('cruiseShip', scene);
+
+      const length = 30;
+      const width = 8;
+      const deckY = 1;
+      const wallHeight = 3;
+      const doorDepth = 4;
+      const doorHeight = 2.5;
+
+      const floor = BABYLON.MeshBuilder.CreateBox('shipFloor',{width:width, depth:length, height:0.2}, scene);
+      floor.position.y = deckY - 0.1;
+      floor.material = mats.wood;
+      floor.parent = ship;
+
+      const deck = BABYLON.MeshBuilder.CreateBox('shipDeck',{width:width, depth:length, height:0.2}, scene);
+      deck.position.y = deckY + wallHeight + 0.1;
+      deck.material = mats.wood;
+      deck.parent = ship;
+
+      const leftWall = BABYLON.MeshBuilder.CreateBox('shipLeftWall',{width:0.2, height:wallHeight, depth:length}, scene);
+      leftWall.position.set(-width/2 + 0.1, deckY + wallHeight/2, 0);
+      leftWall.material = mats.metal;
+      leftWall.parent = ship;
+
+      const seg = (length - doorDepth)/2;
+      const rightFront = BABYLON.MeshBuilder.CreateBox('shipRightFront',{width:0.2, height:wallHeight, depth:seg}, scene);
+      rightFront.position.set(width/2 - 0.1, deckY + wallHeight/2, -seg/2 - doorDepth/2);
+      rightFront.material = mats.metal;
+      rightFront.parent = ship;
+
+      const rightBack = BABYLON.MeshBuilder.CreateBox('shipRightBack',{width:0.2, height:wallHeight, depth:seg}, scene);
+      rightBack.position.set(width/2 - 0.1, deckY + wallHeight/2, seg/2 + doorDepth/2);
+      rightBack.material = mats.metal;
+      rightBack.parent = ship;
+
+      const rightTop = BABYLON.MeshBuilder.CreateBox('shipRightTop',{width:0.2, height:wallHeight - doorHeight, depth:doorDepth}, scene);
+      rightTop.position.set(width/2 - 0.1, deckY + doorHeight + (wallHeight - doorHeight)/2, 0);
+      rightTop.material = mats.metal;
+      rightTop.parent = ship;
+
+      const frontWall = BABYLON.MeshBuilder.CreateBox('shipFrontWall',{width:width, height:wallHeight, depth:0.2}, scene);
+      frontWall.position.set(0, deckY + wallHeight/2, length/2 - 0.1);
+      frontWall.material = mats.metal;
+      frontWall.parent = ship;
+
+      const backWall = BABYLON.MeshBuilder.CreateBox('shipBackWall',{width:width, height:wallHeight, depth:0.2}, scene);
+      backWall.position.set(0, deckY + wallHeight/2, -length/2 + 0.1);
+      backWall.material = mats.metal;
+      backWall.parent = ship;
+
+      const gangway = BABYLON.MeshBuilder.CreateBox('shipGangway',{width:6, depth:2, height:0.2}, scene);
+      gangway.position.set(width/2 + 3, deckY - 0.1, 0);
+      gangway.material = mats.wood;
+      gangway.parent = ship;
+
+      const pool = BABYLON.MeshBuilder.CreateBox('shipPool',{width:3, depth:5, height:1}, scene);
+      pool.position.set(-1, deckY + wallHeight + 0.5, 0);
+      pool.material = mats.water;
+      pool.parent = ship;
+
+      const cafe = new BABYLON.TransformNode('shipCafe', scene);
+      cafe.parent = ship;
+      cafe.position.set(0, deckY, -10);
+      const counter = BABYLON.MeshBuilder.CreateBox('shipCafeCounter',{width:4, depth:1, height:1}, scene);
+      counter.position.set(0,0.5,0);
+      counter.material = mats.wood;
+      counter.parent = cafe;
+      for(let i=0;i<3;i++){
+        const food = BABYLON.MeshBuilder.CreateSphere('shipFood'+i,{diameter:0.5}, scene);
+        food.position.set(-1 + i*1, 1.2, -0.5);
+        food.material = mats.metal;
+        food.isPickable = true;
+        food.actionManager = new BABYLON.ActionManager(scene);
+        food.actionManager.registerAction(new BABYLON.ExecuteCodeAction(BABYLON.ActionManager.OnPickTrigger, (function(itm){
+          return function(){
+            if(gameState.heldItem === itm){
+              itm.dispose();
+              gameState.heldItem = null;
+              showMessage('Yum!');
+            } else if(!gameState.heldItem){
+              gameState.heldItem = itm;
+              itm.setParent(camera);
+              itm.position.set(0.5,-0.5,1);
+            }
+          };
+        })(food)));
+        food.parent = cafe;
+      }
+
+      const cabins = new BABYLON.TransformNode('shipCabins', scene);
+      cabins.parent = ship;
+      for(let i=0;i<4;i++){
+        const bed = BABYLON.MeshBuilder.CreateBox('thirdBed'+i,{width:1, depth:2, height:0.5}, scene);
+        bed.position.set(-width/2 +1, deckY + 0.25, -15 + i*3);
+        bed.material = mats.metal;
+        bed.parent = cabins;
+      }
+      for(let i=0;i<3;i++){
+        const bed = BABYLON.MeshBuilder.CreateBox('secondBed'+i,{width:1.5, depth:2, height:0.5}, scene);
+        bed.position.set(0, deckY + 0.25, -15 + i*5);
+        bed.material = mats.metal;
+        bed.parent = cabins;
+      }
+      for(let i=0;i<2;i++){
+        const bed = BABYLON.MeshBuilder.CreateBox('firstBed'+i,{width:2, depth:3, height:0.5}, scene);
+        bed.position.set(width/2 -2, deckY + 0.25, -12 + i*8);
+        bed.material = mats.metal;
+        bed.parent = cabins;
+      }
+
+      for(let i=0;i<2;i++){
+        const spa = BABYLON.MeshBuilder.CreateCylinder('shipSpa'+i,{diameter:3, height:1}, scene);
+        spa.position.set(-2 + i*4, deckY + 0.5, 10);
+        spa.material = mats.water;
+        spa.parent = ship;
+      }
+
+      const captain = new BABYLON.TransformNode('captainCabin', scene);
+      captain.parent = ship;
+      captain.position.set(0, deckY, 12);
+      const desk = BABYLON.MeshBuilder.CreateBox('captainDesk',{width:2, depth:1, height:1}, scene);
+      desk.position.set(0,0.5,0);
+      desk.material = mats.wood;
+      desk.parent = captain;
+      const cBed = BABYLON.MeshBuilder.CreateBox('captainBed',{width:2, depth:3, height:0.5}, scene);
+      cBed.position.set(0,0.25,3);
+      cBed.material = mats.metal;
+      cBed.parent = captain;
+
+      const bridge = BABYLON.MeshBuilder.CreateBox('shipBridge',{width:4, depth:3, height:2}, scene);
+      bridge.position.set(0, deckY + wallHeight + 1, length/2 - 2);
+      bridge.material = mats.metal;
+      bridge.parent = ship;
+      const wheel = BABYLON.MeshBuilder.CreateTorus('shipWheel',{diameter:1, thickness:0.1}, scene);
+      wheel.position.set(0, deckY + wallHeight + 1, length/2 - 1);
+      wheel.parent = ship;
+      const driver = BABYLON.MeshBuilder.CreateBox('shipDriver',{width:1, depth:1, height:2}, scene);
+      driver.position.set(0, deckY + wallHeight + 1, length/2 - 3);
+      driver.material = mats.metal;
+      driver.parent = ship;
+
+      return ship;
+    }
+
     const createScene = function() {
     const scene = new BABYLON.Scene(engine);
 
@@ -754,6 +899,8 @@
 
       buildSkyscraper(scene, camera);
       buildHarbor(scene, mats);
+      const cruise = buildCruiseShip(scene, camera, mats);
+      cruise.position = new BABYLON.Vector3(-18, 0, 80);
 
       const roadFront = BABYLON.MeshBuilder.CreateGround('roadFront', {width:32, height:4}, scene);
       roadFront.position = new BABYLON.Vector3(0, 0.01, 12);
