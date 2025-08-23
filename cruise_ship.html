@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Cruise Ship Demo</title>
+  <style>
+    body { font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, 'Helvetica Neue', Arial; margin:0; padding:24px; background:#0b1220; color:#e8ecf1; }
+    h1 { font-size:20px; font-weight:700; margin:0 0 12px; }
+    .row { display:grid; grid-template-columns:1fr 320px; gap:16px; }
+    pre { background:#0e1629; color:#b9c4d4; padding:12px; border-radius:12px; overflow-x:auto; border:1px solid #18233d; }
+    .card { background:#0e1629; border:1px solid #18233d; border-radius:16px; padding:12px; }
+    .muted { color:#9fb1c9; }
+    button { appearance:none; border:1px solid #203055; background:#132045; color:#e9f0fb; border-radius:12px; padding:8px 12px; cursor:pointer; font-weight:600; }
+    button:hover{ filter:brightness(1.1); }
+    .stack { display:flex; flex-wrap:wrap; gap:8px; }
+  </style>
+  <script type="module" src="cruise-ship-item.js"></script>
+</head>
+<body>
+  <h1>🚢 CruiseShipItem Demo</h1>
+  <div class="row">
+    <cruise-ship-item id="ship" scale="1" deck="ext" style="width:100%;height:600px;display:block;"></cruise-ship-item>
+    <div class="card">
+      <div class="stack">
+        <button onclick="ship.openDoor()">Open Door</button>
+        <button onclick="ship.closeDoor()">Close Door</button>
+        <button onclick="ship.enter()">Enter Ship</button>
+        <button onclick="ship.exit()">Exit Ship</button>
+        <button onclick="ship.setDeck('1')">Deck 1</button>
+        <button onclick="ship.setDeck('2')">Deck 2</button>
+        <button onclick="ship.setDeck('3')">Deck 3</button>
+        <button onclick="ship.setDeck('4')">Deck 4</button>
+        <button onclick="ship.setDeck('bridge')">Bridge</button>
+        <button onclick="ship.resetInventory()">Clear Inventory</button>
+      </div>
+      <h3 class="muted" style="margin-top:12px;">Events</h3>
+      <pre id="log">(events will appear here)</pre>
+    </div>
+  </div>
+
+  <script>
+    const logEl = document.getElementById('log');
+    const ship = document.getElementById('ship');
+    const push = (msg)=>{ logEl.textContent = (msg + "\n" + logEl.textContent).slice(0,2000); };
+    ship.addEventListener('pickup', e => push('pickup: ' + JSON.stringify(e.detail)));
+    ship.addEventListener('consume', e => push('consume: ' + JSON.stringify(e.detail)));
+    ship.addEventListener('door', e => push('door: ' + JSON.stringify(e.detail)));
+    ship.addEventListener('enter', e => push('enter interior'));
+    ship.addEventListener('exit', e => push('exit to exterior'));
+    ship.addEventListener('helm', e => push('helm: ' + JSON.stringify(e.detail)));
+  </script>
+</body>
+</html>
