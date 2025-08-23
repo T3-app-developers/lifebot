@@ -666,6 +666,26 @@
       skyRight.position = new BABYLON.Vector3(26, 0.01, 32);
       skyRight.material = roadMat;
 
+      // create a second island visible from the skyscraper
+      const island = BABYLON.MeshBuilder.CreateGround('secondIsland', {width:120, height:120}, scene);
+      island.position = new BABYLON.Vector3(20, 0, 220);
+      island.material = groundMat;
+
+      // tall road bridge connecting the main land to the new island
+      const bridgeShape = [
+        new BABYLON.Vector3(-4, 0, 0),
+        new BABYLON.Vector3(4, 0, 0),
+        new BABYLON.Vector3(4, 0.2, 0),
+        new BABYLON.Vector3(-4, 0.2, 0)
+      ];
+      const bridgePath = [
+        new BABYLON.Vector3(20, 0, 115),
+        new BABYLON.Vector3(20, 15, 140),
+        new BABYLON.Vector3(20, 0, 160)
+      ];
+      const bridge = BABYLON.MeshBuilder.ExtrudeShape('islandBridge', {shape: bridgeShape, path: bridgePath, cap: BABYLON.Mesh.CAP_ALL}, scene);
+      bridge.material = roadMat;
+
       createTrafficLight('tl1', new BABYLON.Vector3(14, 0, 12));
       createTrafficLight('tl2', new BABYLON.Vector3(14, 0, 39));
 
@@ -678,7 +698,8 @@
       });
 
       const stadium = createLifeBotStadium(scene);
-      stadium.root.position = new BABYLON.Vector3(40, 0, 60);
+      // move the stadium onto the new island toward the back
+      stadium.root.position = new BABYLON.Vector3(20, 0, 240);
 
       const shop = buildShop('shop', new BABYLON.Vector3(0, 0, 8), scene, mats);
       shop.items.forEach(item => {
