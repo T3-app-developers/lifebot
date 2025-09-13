@@ -88,6 +88,7 @@
 
     const spyElevatorPanel = document.getElementById('spyElevatorPanel');
     const spyLevelLabel = document.getElementById('spyLevelLabel');
+
     function updateCoinsUI(){
       coinEl.textContent = gameState.coins;
     }
@@ -545,7 +546,7 @@
         document.getElementById('levelLabel').innerText = `Level ${lvl}`;
       }
 
-      document.querySelectorAll('.elevator-panel button').forEach(btn => {
+      document.querySelectorAll('#elevatorPanel button').forEach(btn => {
         btn.addEventListener('click', () => {
           const lvl = parseInt(btn.dataset.target);
           teleportToLevel(lvl);
@@ -718,11 +719,13 @@
 
       const levelHeights = [1,7,13];
 
+
       levelHeights.forEach((y, i) => {
         const floor = BABYLON.MeshBuilder.CreateBox('spyFloor'+i, {width:12, depth:12, height:0.2}, scene);
         floor.material = mats.metal;
         floor.position = new BABYLON.Vector3(0, y-0.1, 0);
         floor.parent = base;
+
       });
 
       const elevator = BABYLON.MeshBuilder.CreateBox('spyElevator', {width:3, depth:3, height:0.3}, scene);
@@ -763,8 +766,7 @@
       const screen = BABYLON.MeshBuilder.CreatePlane('spyScreen',{width:4,height:2},scene);
       screen.position = new BABYLON.Vector3(0, levelHeights[2]+1.5, -5.9);
       screen.rotation.y = Math.PI;
-      screen.material = mats.brick;
-      screen.parent = base;
+
 
       // exit door inside base
       const exitDoor = BABYLON.MeshBuilder.CreateBox('spyExitDoor',{width:2,height:3,depth:0.1},scene);
@@ -996,15 +998,12 @@
       });
 
       let lastAPress = 0;
+
       document.addEventListener('keydown', (ev) => {
         if(ev.key === 'a' || ev.key === 'A'){
           const now = Date.now();
           if(now - lastAPress < 5000){
-            camera.parent = null;
-            camera.position = spyIsland.position.add(new BABYLON.Vector3(0,2,-30));
-            camera.rotation = new BABYLON.Vector3(0,0,0);
-            spyElevatorPanel.style.display = 'none';
-            spyLevelLabel.style.display = 'none';
+
             lastAPress = 0;
           } else {
             lastAPress = now;
