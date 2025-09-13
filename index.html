@@ -69,6 +69,14 @@
     <button data-target="3">3</button>
   </div>
 
+  <div class="level-label" id="spyLevelLabel" style="display:none;">Level 1</div>
+  <div class="elevator-panel" id="spyElevatorPanel" style="display:none;">
+    <div>Spy Lift:</div>
+    <button data-target="1">1</button>
+    <button data-target="2">2</button>
+    <button data-target="3">3</button>
+  </div>
+
   <script>
     const canvas = document.getElementById('renderCanvas');
     const engine = new BABYLON.Engine(canvas, true);
@@ -77,6 +85,9 @@
     const coinEl = document.getElementById('coinCount');
 
     const messageEl = document.getElementById('message');
+
+    const spyElevatorPanel = document.getElementById('spyElevatorPanel');
+    const spyLevelLabel = document.getElementById('spyLevelLabel');
     function updateCoinsUI(){
       coinEl.textContent = gameState.coins;
     }
@@ -658,8 +669,143 @@
       buildLighthouse(new BABYLON.Vector3(-10,0,startZ + pierLength), scene, mats);
     }
 
+    function buildSpyIsland(scene, camera, mats, ui) {
+      const root = new BABYLON.TransformNode('spyIsland', scene);
+      // hide far away and float high above the ocean
+      root.position = new BABYLON.Vector3(1000, 100, 1000);
+
+      // floating rock base
+      const rock = BABYLON.MeshBuilder.CreateCylinder('spyRock', {diameterTop:0, diameterBottom:40, height:20, tessellation:8}, scene);
+      rock.material = mats.rock;
+      rock.position.y = 10;
+      rock.parent = root;
+
+      // grassy top of the island
+      const grass = BABYLON.MeshBuilder.CreateCylinder('spyGrass', {diameter:40, height:2, tessellation:8}, scene);
+      grass.material = mats.ground;
+      grass.position.y = 20;
+      grass.parent = root;
+
+      // glowing portal entrance on top
+      const portalRing = BABYLON.MeshBuilder.CreateTorus('spyPortalRing', {diameter:10, thickness:1, tessellation:32}, scene);
+      portalRing.material = mats.portal;
+      portalRing.position.y = 21;
+      portalRing.parent = root;
+
+      const portal = BABYLON.MeshBuilder.CreateDisc('spyPortal', {radius:4.5, tessellation:32}, scene);
+      portal.material = mats.portal;
+      portal.position.y = 21;
+      portal.rotation.x = Math.PI/2;
+      portal.parent = root;
+
+      // holographic panels around the island
+      for (let i = 0; i < 3; i++) {
+        const panel = BABYLON.MeshBuilder.CreatePlane('spyPanel'+i, {width:4, height:2}, scene);
+        panel.material = mats.portal;
+        const ang = i * Math.PI * 2 / 3;
+        panel.position = new BABYLON.Vector3(Math.cos(ang)*8, 24, Math.sin(ang)*8);
+        panel.rotation.y = -ang;
+        panel.parent = root;
+      }
+
+      scene.registerBeforeRender(function(){
+        portalRing.rotation.y += 0.02;
+      });
+
+      // internal base root
+      const base = new BABYLON.TransformNode('spyBase', scene);
+      base.parent = root;
+
+      const levelHeights = [1,7,13];
+
+      levelHeights.forEach((y, i) => {
+        const floor = BABYLON.MeshBuilder.CreateBox('spyFloor'+i, {width:12, depth:12, height:0.2}, scene);
+        floor.material = mats.metal;
+        floor.position = new BABYLON.Vector3(0, y-0.1, 0);
+        floor.parent = base;
+      });
+
+      const elevator = BABYLON.MeshBuilder.CreateBox('spyElevator', {width:3, depth:3, height:0.3}, scene);
+      elevator.material = mats.metal;
+      elevator.position = new BABYLON.Vector3(0, levelHeights[0], 0);
+      elevator.parent = base;
+
+      // simple spy car on level 1
+      const carBody = BABYLON.MeshBuilder.CreateBox('spyCarBody',{width:2,height:0.5,depth:4},scene);
+      carBody.material = mats.metal;
+      carBody.position = new BABYLON.Vector3(-4, levelHeights[0]+0.25, 0);
+      carBody.parent = base;
+      for (let i = -1; i <= 1; i += 2) {
+        for (let j = -1; j <= 1; j += 2) {
+          const wheel = BABYLON.MeshBuilder.CreateCylinder('wheel'+i+j,{diameter:0.7,height:0.3},scene);
+          wheel.rotation.z = Math.PI/2;
+          wheel.material = mats.metal;
+          wheel.position = new BABYLON.Vector3(-4 + i*0.8, levelHeights[0]+0.35, j*1.5);
+          wheel.parent = base;
+        }
+      }
+
+      // gadget table on level 2
+      const table = BABYLON.MeshBuilder.CreateBox('gadgetTable',{width:2,depth:2,height:0.2},scene);
+      table.material = mats.metal;
+      table.position = new BABYLON.Vector3(3, levelHeights[1]+0.1, 0);
+      table.parent = base;
+      const gadget = BABYLON.MeshBuilder.CreateTorus('spyGadget',{thickness:0.2,diameter:1.2},scene);
+      gadget.material = mats.metal;
+      gadget.position = new BABYLON.Vector3(3, levelHeights[1]+1, 0);
+      gadget.parent = base;
+
+      // command center on level 3
+      const console = BABYLON.MeshBuilder.CreateBox('spyConsole',{width:3,depth:1,height:0.5},scene);
+      console.material = mats.metal;
+      console.position = new BABYLON.Vector3(0, levelHeights[2]+0.25, -4);
+      console.parent = base;
+      const screen = BABYLON.MeshBuilder.CreatePlane('spyScreen',{width:4,height:2},scene);
+      screen.position = new BABYLON.Vector3(0, levelHeights[2]+1.5, -5.9);
+      screen.rotation.y = Math.PI;
+      screen.material = mats.brick;
+      screen.parent = base;
+
+      // exit door inside base
+      const exitDoor = BABYLON.MeshBuilder.CreateBox('spyExitDoor',{width:2,height:3,depth:0.1},scene);
+      exitDoor.material = mats.metal;
+      exitDoor.position = new BABYLON.Vector3(0,1.5,-5);
+      exitDoor.parent = base;
+
+      // show elevator UI and attach camera when entering through portal
+      portal.actionManager = new BABYLON.ActionManager(scene);
+      portal.actionManager.registerAction(new BABYLON.ExecuteCodeAction(BABYLON.ActionManager.OnPickTrigger, function(){
+        camera.parent = elevator;
+        camera.position = new BABYLON.Vector3(0,1.6,-2);
+        ui.panel.style.display = 'block';
+        ui.label.style.display = 'block';
+        ui.label.textContent = 'Level 1';
+      }));
+
+      // exiting back outside
+      exitDoor.actionManager = new BABYLON.ActionManager(scene);
+      exitDoor.actionManager.registerAction(new BABYLON.ExecuteCodeAction(BABYLON.ActionManager.OnPickTrigger, function(){
+        camera.parent = null;
+        camera.position = root.position.add(new BABYLON.Vector3(0,2,-30));
+        camera.rotation = new BABYLON.Vector3(0,0,0);
+        ui.panel.style.display = 'none';
+        ui.label.style.display = 'none';
+      }));
+
+      // elevator movement handler
+      root.moveElevator = function(levelIdx){
+        const targetY = levelHeights[levelIdx];
+        BABYLON.Animation.CreateAndStartAnimation('spyLiftMove', elevator, 'position.y', 30, 60, elevator.position.y, targetY, BABYLON.Animation.ANIMATIONLOOPMODE_CONSTANT);
+        ui.label.textContent = 'Level ' + (levelIdx + 1);
+      };
+
+      return root;
+    }
+
     const createScene = function() {
     const scene = new BABYLON.Scene(engine);
+
+    const glow = new BABYLON.GlowLayer('glow', scene);
 
     const groundMat = new BABYLON.StandardMaterial('groundMat', scene);
     groundMat.diffuseColor = new BABYLON.Color3(0.2, 0.8, 0.2);
@@ -680,7 +826,14 @@
     const woodMat = new BABYLON.StandardMaterial('woodMat', scene);
     woodMat.diffuseColor = new BABYLON.Color3(0.6, 0.4, 0.2);
 
-    const mats = { brick: brickMat, metal: metalMat, water: waterMat, ground: groundMat, sand: sandMat, wood: woodMat };
+    const rockMat = new BABYLON.StandardMaterial('rockMat', scene);
+    rockMat.diffuseColor = new BABYLON.Color3(0.4, 0.3, 0.2);
+
+    const portalMat = new BABYLON.StandardMaterial('portalMat', scene);
+    portalMat.emissiveColor = new BABYLON.Color3(0, 0.8, 1);
+    portalMat.alpha = 0.8;
+
+    const mats = { brick: brickMat, metal: metalMat, water: waterMat, ground: groundMat, sand: sandMat, wood: woodMat, rock: rockMat, portal: portalMat };
 
     function createTrafficLight(name, position){
       const pole = BABYLON.MeshBuilder.CreateCylinder(name+'Pole', {diameter:0.2, height:3}, scene);
@@ -832,6 +985,32 @@
 
       const bot = buildFlameBot('bot', scene);
       bot.position.set(shop.position.x + 3, 0, shop.position.z);
+
+      const spyIsland = buildSpyIsland(scene, camera, mats, {panel: spyElevatorPanel, label: spyLevelLabel});
+
+      spyElevatorPanel.querySelectorAll('button').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const lvl = parseInt(btn.dataset.target, 10) - 1;
+          spyIsland.moveElevator(lvl);
+        });
+      });
+
+      let lastAPress = 0;
+      document.addEventListener('keydown', (ev) => {
+        if(ev.key === 'a' || ev.key === 'A'){
+          const now = Date.now();
+          if(now - lastAPress < 5000){
+            camera.parent = null;
+            camera.position = spyIsland.position.add(new BABYLON.Vector3(0,2,-30));
+            camera.rotation = new BABYLON.Vector3(0,0,0);
+            spyElevatorPanel.style.display = 'none';
+            spyLevelLabel.style.display = 'none';
+            lastAPress = 0;
+          } else {
+            lastAPress = now;
+          }
+        }
+      });
 
       scene.onBeforeRenderObservable.add(()=>{
         if(gameState.heldItem){
