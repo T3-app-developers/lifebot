@@ -88,8 +88,7 @@
 
     const spyElevatorPanel = document.getElementById('spyElevatorPanel');
     const spyLevelLabel = document.getElementById('spyLevelLabel');
-    const mainElevatorPanel = document.getElementById('elevatorPanel');
-    const mainLevelLabel = document.getElementById('levelLabel');
+
     function updateCoinsUI(){
       coinEl.textContent = gameState.coins;
     }
@@ -719,8 +718,7 @@
       base.parent = root;
 
       const levelHeights = [1,7,13];
-      const wallMat = new BABYLON.StandardMaterial('spyWallMat', scene);
-      wallMat.diffuseColor = new BABYLON.Color3(0.05,0.05,0.05);
+
 
       levelHeights.forEach((y, i) => {
         const floor = BABYLON.MeshBuilder.CreateBox('spyFloor'+i, {width:12, depth:12, height:0.2}, scene);
@@ -728,31 +726,6 @@
         floor.position = new BABYLON.Vector3(0, y-0.1, 0);
         floor.parent = base;
 
-        const wallHeight = 4;
-        const north = BABYLON.MeshBuilder.CreateBox('spyWallN'+i,{width:12,height:wallHeight,depth:0.2},scene);
-        north.position = new BABYLON.Vector3(0, y + wallHeight/2, -6);
-        north.material = wallMat;
-        north.parent = base;
-        const south = north.clone('spyWallS'+i);
-        south.position.z = 6;
-        south.parent = base;
-        const east = BABYLON.MeshBuilder.CreateBox('spyWallE'+i,{width:0.2,height:wallHeight,depth:12},scene);
-        east.position = new BABYLON.Vector3(6, y + wallHeight/2, 0);
-        east.material = wallMat;
-        east.parent = base;
-        const west = east.clone('spyWallW'+i);
-        west.position.x = -6;
-        west.parent = base;
-
-        const stripMat = new BABYLON.StandardMaterial('spyLightMat'+i, scene);
-        stripMat.emissiveColor = new BABYLON.Color3(0,0.6,1);
-        const frontStrip = BABYLON.MeshBuilder.CreateBox('spyStripF'+i,{width:12,height:0.1,depth:0.1},scene);
-        frontStrip.position = new BABYLON.Vector3(0, y + wallHeight - 0.05, -5.95);
-        frontStrip.material = stripMat;
-        frontStrip.parent = base;
-        const backStrip = frontStrip.clone('spyStripB'+i);
-        backStrip.position.z = 5.95;
-        backStrip.parent = base;
       });
 
       const elevator = BABYLON.MeshBuilder.CreateBox('spyElevator', {width:3, depth:3, height:0.3}, scene);
@@ -793,23 +766,7 @@
       const screen = BABYLON.MeshBuilder.CreatePlane('spyScreen',{width:4,height:2},scene);
       screen.position = new BABYLON.Vector3(0, levelHeights[2]+1.5, -5.9);
       screen.rotation.y = Math.PI;
-      const screenMat = new BABYLON.StandardMaterial('spyScreenMat', scene);
-      const mapTex = new BABYLON.DynamicTexture('spyMapTex',{width:1024,height:512},scene,false);
-      screenMat.diffuseTexture = mapTex;
-      screenMat.emissiveColor = new BABYLON.Color3(1,0.5,0);
-      screen.material = screenMat;
-      screen.parent = base;
-      const ctx = mapTex.getContext();
-      ctx.fillStyle = 'black';
-      ctx.fillRect(0,0,1024,512);
-      ctx.strokeStyle = 'orange';
-      ctx.lineWidth = 4;
-      ctx.strokeRect(50,100,400,200);
-      ctx.strokeRect(600,150,350,180);
-      ctx.font = 'bold 80px Arial';
-      ctx.fillStyle = 'orange';
-      ctx.fillText('WORLD MAP', 260, 300);
-      mapTex.update();
+
 
       // exit door inside base
       const exitDoor = BABYLON.MeshBuilder.CreateBox('spyExitDoor',{width:2,height:3,depth:0.1},scene);
@@ -1041,31 +998,12 @@
       });
 
       let lastAPress = 0;
-      let atSpyIsland = false;
+
       document.addEventListener('keydown', (ev) => {
         if(ev.key === 'a' || ev.key === 'A'){
           const now = Date.now();
           if(now - lastAPress < 5000){
-            if(!atSpyIsland){
-              camera.parent = null;
-              camera.position = spyIsland.position.add(new BABYLON.Vector3(0,2,-30));
-              camera.rotation = new BABYLON.Vector3(0,0,0);
-              spyElevatorPanel.style.display = 'none';
-              spyLevelLabel.style.display = 'none';
-              mainElevatorPanel.style.display = 'none';
-              mainLevelLabel.style.display = 'none';
-              atSpyIsland = true;
-            } else {
-              camera.parent = null;
-              camera.position = new BABYLON.Vector3(20,1.5,32);
-              camera.rotation = new BABYLON.Vector3(0,0,0);
-              mainElevatorPanel.style.display = 'block';
-              mainLevelLabel.style.display = 'block';
-              mainLevelLabel.textContent = 'Level 1';
-              spyElevatorPanel.style.display = 'none';
-              spyLevelLabel.style.display = 'none';
-              atSpyIsland = false;
-            }
+
             lastAPress = 0;
           } else {
             lastAPress = now;
