@@ -671,24 +671,46 @@
 
     function buildSpyIsland(scene, camera, mats, ui) {
       const root = new BABYLON.TransformNode('spyIsland', scene);
-      // hide far away from main islands
-      root.position = new BABYLON.Vector3(1000, 0, 1000);
+      // hide far away and float high above the ocean
+      root.position = new BABYLON.Vector3(1000, 100, 1000);
 
-      const ground = BABYLON.MeshBuilder.CreateGround('spyGround', {width:80, height:80}, scene);
-      ground.material = mats.ground;
-      ground.parent = root;
+      // floating rock base
+      const rock = BABYLON.MeshBuilder.CreateCylinder('spyRock', {diameterTop:0, diameterBottom:40, height:20, tessellation:8}, scene);
+      rock.material = mats.rock;
+      rock.position.y = 10;
+      rock.parent = root;
 
-      // cone to look like a mountain
-      const mountain = BABYLON.MeshBuilder.CreateCylinder('spyMountain', {diameterTop:0, diameterBottom:60, height:30, tessellation:16}, scene);
-      mountain.material = mats.ground;
-      mountain.position.y = 15;
-      mountain.parent = root;
+      // grassy top of the island
+      const grass = BABYLON.MeshBuilder.CreateCylinder('spyGrass', {diameter:40, height:2, tessellation:8}, scene);
+      grass.material = mats.ground;
+      grass.position.y = 20;
+      grass.parent = root;
 
-      // entry door on the side of the mountain
-      const door = BABYLON.MeshBuilder.CreateBox('spyDoor', {width:4, height:5, depth:1}, scene);
-      door.material = mats.metal;
-      door.position = new BABYLON.Vector3(0, 2.5, -20);
-      door.parent = root;
+      // glowing portal entrance on top
+      const portalRing = BABYLON.MeshBuilder.CreateTorus('spyPortalRing', {diameter:10, thickness:1, tessellation:32}, scene);
+      portalRing.material = mats.portal;
+      portalRing.position.y = 21;
+      portalRing.parent = root;
+
+      const portal = BABYLON.MeshBuilder.CreateDisc('spyPortal', {radius:4.5, tessellation:32}, scene);
+      portal.material = mats.portal;
+      portal.position.y = 21;
+      portal.rotation.x = Math.PI/2;
+      portal.parent = root;
+
+      // holographic panels around the island
+      for (let i = 0; i < 3; i++) {
+        const panel = BABYLON.MeshBuilder.CreatePlane('spyPanel'+i, {width:4, height:2}, scene);
+        panel.material = mats.portal;
+        const ang = i * Math.PI * 2 / 3;
+        panel.position = new BABYLON.Vector3(Math.cos(ang)*8, 24, Math.sin(ang)*8);
+        panel.rotation.y = -ang;
+        panel.parent = root;
+      }
+
+      scene.registerBeforeRender(function(){
+        portalRing.rotation.y += 0.02;
+      });
 
       // internal base root
       const base = new BABYLON.TransformNode('spyBase', scene);
@@ -750,9 +772,9 @@
       exitDoor.position = new BABYLON.Vector3(0,1.5,-5);
       exitDoor.parent = base;
 
-      // show elevator UI and attach camera when entering
-      door.actionManager = new BABYLON.ActionManager(scene);
-      door.actionManager.registerAction(new BABYLON.ExecuteCodeAction(BABYLON.ActionManager.OnPickTrigger, function(){
+      // show elevator UI and attach camera when entering through portal
+      portal.actionManager = new BABYLON.ActionManager(scene);
+      portal.actionManager.registerAction(new BABYLON.ExecuteCodeAction(BABYLON.ActionManager.OnPickTrigger, function(){
         camera.parent = elevator;
         camera.position = new BABYLON.Vector3(0,1.6,-2);
         ui.panel.style.display = 'block';
@@ -783,6 +805,8 @@
     const createScene = function() {
     const scene = new BABYLON.Scene(engine);
 
+    const glow = new BABYLON.GlowLayer('glow', scene);
+
     const groundMat = new BABYLON.StandardMaterial('groundMat', scene);
     groundMat.diffuseColor = new BABYLON.Color3(0.2, 0.8, 0.2);
 
@@ -802,7 +826,14 @@
     const woodMat = new BABYLON.StandardMaterial('woodMat', scene);
     woodMat.diffuseColor = new BABYLON.Color3(0.6, 0.4, 0.2);
 
-    const mats = { brick: brickMat, metal: metalMat, water: waterMat, ground: groundMat, sand: sandMat, wood: woodMat };
+    const rockMat = new BABYLON.StandardMaterial('rockMat', scene);
+    rockMat.diffuseColor = new BABYLON.Color3(0.4, 0.3, 0.2);
+
+    const portalMat = new BABYLON.StandardMaterial('portalMat', scene);
+    portalMat.emissiveColor = new BABYLON.Color3(0, 0.8, 1);
+    portalMat.alpha = 0.8;
+
+    const mats = { brick: brickMat, metal: metalMat, water: waterMat, ground: groundMat, sand: sandMat, wood: woodMat, rock: rockMat, portal: portalMat };
 
     function createTrafficLight(name, position){
       const pole = BABYLON.MeshBuilder.CreateCylinder(name+'Pole', {diameter:0.2, height:3}, scene);
