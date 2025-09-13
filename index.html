@@ -658,6 +658,66 @@
       buildLighthouse(new BABYLON.Vector3(-10,0,startZ + pierLength), scene, mats);
     }
 
+    function buildSpyIsland(scene, camera, mats) {
+      const root = new BABYLON.TransformNode('spyIsland', scene);
+      root.position = new BABYLON.Vector3(-150, 0, 0);
+
+      const ground = BABYLON.MeshBuilder.CreateGround('spyGround', {width:40, height:40}, scene);
+      ground.material = mats.ground;
+      ground.parent = root;
+
+      const hill = BABYLON.MeshBuilder.CreateSphere('spyHill', {diameter:30}, scene);
+      hill.scaling.y = 0.5;
+      hill.position = new BABYLON.Vector3(0, 15, 0);
+      hill.material = mats.ground;
+      hill.parent = root;
+
+      const cave = BABYLON.MeshBuilder.CreateBox('spyCave', {width:6, height:4, depth:6}, scene);
+      cave.position = new BABYLON.Vector3(0, 2, 0);
+      cave.material = mats.brick;
+      cave.parent = root;
+
+      const door = BABYLON.MeshBuilder.CreateBox('spyDoor', {width:2, height:3, depth:0.1}, scene);
+      door.position = new BABYLON.Vector3(0, 1.5, 3);
+      door.material = mats.metal;
+      door.parent = root;
+
+      const levelPositions = [
+        new BABYLON.Vector3(0, 1, -1),
+        new BABYLON.Vector3(0, 5, -1),
+        new BABYLON.Vector3(0, 9, -1)
+      ];
+
+      door.actionManager = new BABYLON.ActionManager(scene);
+      door.actionManager.registerAction(new BABYLON.ExecuteCodeAction(BABYLON.ActionManager.OnPickTrigger, function(){
+        camera.position = root.position.add(levelPositions[0]);
+      }));
+
+      levelPositions.forEach((pos, idx) => {
+        const btn = BABYLON.MeshBuilder.CreateBox('spyLiftBtn'+idx, {size:0.5}, scene);
+        btn.position = root.position.add(new BABYLON.Vector3(2, pos.y, -1));
+        const mat = new BABYLON.StandardMaterial('spyBtnMat'+idx, scene);
+        mat.diffuseColor = new BABYLON.Color3(0.2,0.2,0.2);
+        btn.material = mat;
+        btn.actionManager = new BABYLON.ActionManager(scene);
+        btn.actionManager.registerAction(new BABYLON.ExecuteCodeAction(BABYLON.ActionManager.OnPickTrigger, function(){
+          camera.position = root.position.add(pos);
+        }));
+      });
+
+      const vehicle = BABYLON.MeshBuilder.CreateBox('spyVehicle', {width:2, height:1, depth:4}, scene);
+      vehicle.material = mats.metal;
+      vehicle.position = root.position.add(new BABYLON.Vector3(-5,1,0));
+      vehicle.parent = root;
+
+      const gadget = BABYLON.MeshBuilder.CreateSphere('spyGadget', {diameter:1}, scene);
+      gadget.material = mats.metal;
+      gadget.position = root.position.add(new BABYLON.Vector3(5,2,0));
+      gadget.parent = root;
+
+      return root;
+    }
+
     const createScene = function() {
     const scene = new BABYLON.Scene(engine);
 
@@ -832,6 +892,21 @@
 
       const bot = buildFlameBot('bot', scene);
       bot.position.set(shop.position.x + 3, 0, shop.position.z);
+
+      const spyIsland = buildSpyIsland(scene, camera, mats);
+
+      let lastAPress = 0;
+      document.addEventListener('keydown', (ev) => {
+        if(ev.key === 'a' || ev.key === 'A'){
+          const now = Date.now();
+          if(now - lastAPress < 5000){
+            camera.position = spyIsland.position.add(new BABYLON.Vector3(0,1,-1));
+            lastAPress = 0;
+          } else {
+            lastAPress = now;
+          }
+        }
+      });
 
       scene.onBeforeRenderObservable.add(()=>{
         if(gameState.heldItem){
