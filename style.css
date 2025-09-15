@@ -1,0 +1,326 @@
+:root {
+  --hud-bg: rgba(10, 17, 30, 0.72);
+  --hud-border: rgba(102, 153, 255, 0.25);
+  --hud-glow: rgba(40, 120, 255, 0.45);
+  --hud-text: #f2f6ff;
+  --hud-muted: #9cb3d9;
+  --accent: #6ad6ff;
+  --danger: #ff6a9c;
+  --success: #6affb0;
+  --warning: #ffd66a;
+  font-family: 'Inter', 'Segoe UI', -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif;
+  color-scheme: dark;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html, body {
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  background: radial-gradient(circle at 20% 20%, #121b2f, #05070e 70%);
+  color: var(--hud-text);
+  font-family: inherit;
+}
+
+#renderCanvas {
+  width: 100%;
+  height: 100%;
+  display: block;
+  background: transparent;
+}
+
+#hud {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+}
+
+.hud-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  padding: 16px 24px;
+  gap: 16px;
+}
+
+.status-bar {
+  min-width: 320px;
+  background: var(--hud-bg);
+  border: 1px solid var(--hud-border);
+  border-radius: 18px;
+  padding: 12px 18px;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.3), 0 0 0 1px rgba(255, 255, 255, 0.03);
+  backdrop-filter: blur(18px);
+  pointer-events: auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+}
+
+.status-bar .stat {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.status-bar .label {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--hud-muted);
+}
+
+.status-bar .value {
+  font-size: 18px;
+  font-weight: 600;
+}
+
+#notifications {
+  position: absolute;
+  top: 96px;
+  left: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  pointer-events: none;
+  z-index: 2;
+}
+
+.notification {
+  padding: 12px 16px;
+  border-radius: 16px;
+  background: rgba(10, 17, 30, 0.85);
+  border: 1px solid rgba(122, 164, 255, 0.25);
+  box-shadow: 0 16px 32px rgba(0, 0, 0, 0.35);
+  font-size: 14px;
+  line-height: 1.4;
+  opacity: 0;
+  transform: translateY(-12px);
+  animation: notification-in 180ms ease-out forwards;
+}
+
+.notification.success { border-color: rgba(92, 255, 184, 0.45); box-shadow: 0 16px 40px rgba(0, 120, 96, 0.35); }
+.notification.warning { border-color: rgba(255, 214, 106, 0.45); box-shadow: 0 16px 40px rgba(120, 90, 0, 0.35); }
+.notification.danger { border-color: rgba(255, 106, 156, 0.45); box-shadow: 0 16px 40px rgba(120, 0, 50, 0.35); }
+
+@keyframes notification-in {
+  from { opacity: 0; transform: translateY(-12px) scale(0.98); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+#objectivePanel {
+  max-width: 320px;
+  margin-left: auto;
+  background: var(--hud-bg);
+  border: 1px solid var(--hud-border);
+  border-radius: 18px;
+  padding: 16px;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.3);
+  backdrop-filter: blur(18px);
+  pointer-events: auto;
+}
+
+#objectivePanel h2 {
+  margin: 0 0 8px;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+#objectivePanel ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  gap: 6px;
+}
+
+#objectivePanel li {
+  font-size: 14px;
+  line-height: 1.4;
+  color: var(--hud-muted);
+}
+
+#objectivePanel li.active {
+  color: var(--hud-text);
+  font-weight: 600;
+}
+
+#reticle {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 18px;
+  height: 18px;
+  margin-left: -9px;
+  margin-top: -9px;
+  display: none;
+  pointer-events: none;
+  z-index: 2;
+}
+
+#reticle::before,
+#reticle::after {
+  content: '';
+  position: absolute;
+  background: var(--accent);
+  border-radius: 999px;
+}
+
+#reticle::before {
+  left: 50%;
+  top: 0;
+  width: 2px;
+  height: 18px;
+  margin-left: -1px;
+}
+
+#reticle::after {
+  top: 50%;
+  left: 0;
+  height: 2px;
+  width: 18px;
+  margin-top: -1px;
+}
+
+#interactionPrompt {
+  position: absolute;
+  bottom: 120px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 12px 18px;
+  border-radius: 14px;
+  background: rgba(10, 17, 30, 0.85);
+  border: 1px solid rgba(122, 164, 255, 0.35);
+  font-size: 14px;
+  letter-spacing: 0.02em;
+  display: none;
+  pointer-events: none;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(12px);
+}
+
+#pointerLockOverlay {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  background: rgba(5, 9, 18, 0.85);
+  backdrop-filter: blur(6px);
+  transition: opacity 120ms ease;
+}
+
+#pointerLockOverlay.hidden {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.pointer-card {
+  padding: 32px 40px;
+  border-radius: 24px;
+  background: rgba(14, 22, 40, 0.92);
+  border: 1px solid rgba(128, 168, 255, 0.32);
+  text-align: center;
+  display: grid;
+  gap: 12px;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.45);
+  max-width: 420px;
+}
+
+.pointer-card h1 {
+  margin: 0;
+  font-weight: 600;
+  font-size: 24px;
+}
+
+.pointer-card p {
+  margin: 0;
+  font-size: 15px;
+  color: var(--hud-muted);
+}
+
+.pointer-card .hint {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+  font-size: 13px;
+  color: var(--hud-text);
+}
+
+.pointer-card .hint span {
+  padding: 6px 10px;
+  border-radius: 10px;
+  background: rgba(18, 32, 58, 0.9);
+  border: 1px solid rgba(122, 164, 255, 0.3);
+}
+
+#questToast {
+  position: absolute;
+  bottom: 40px;
+  right: 40px;
+  display: none;
+  background: rgba(9, 18, 32, 0.92);
+  border: 1px solid rgba(106, 214, 255, 0.35);
+  border-radius: 20px;
+  padding: 20px 24px;
+  box-shadow: 0 18px 60px rgba(0, 0, 0, 0.5);
+  max-width: 320px;
+  pointer-events: none;
+}
+
+#questToast h3 {
+  margin: 0 0 8px;
+  font-size: 18px;
+}
+
+#questToast p {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.45;
+  color: var(--hud-muted);
+}
+
+.tooltip {
+  position: absolute;
+  padding: 8px 12px;
+  background: rgba(9, 18, 32, 0.9);
+  border: 1px solid rgba(106, 214, 255, 0.4);
+  border-radius: 12px;
+  font-size: 12px;
+  pointer-events: none;
+  display: none;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.4);
+}
+
+.tooltip strong {
+  color: var(--accent);
+}
+
+@media (max-width: 768px) {
+  .hud-row {
+    flex-direction: column;
+    align-items: stretch;
+    padding: 12px;
+  }
+  #notifications {
+    left: 12px;
+    right: 12px;
+  }
+  .status-bar,
+  #objectivePanel {
+    width: 100%;
+    margin: 0;
+  }
+  #questToast {
+    left: 12px;
+    right: 12px;
+    max-width: none;
+  }
+}
