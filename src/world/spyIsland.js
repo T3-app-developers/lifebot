@@ -88,6 +88,7 @@ export function createSpyIsland(scene, materials, shadowGenerator, interactionMa
   exitDoor.position = new BABYLON.Vector3(0, 1.5, -6.1);
   exitDoor.material = materials.metal;
   exitDoor.parent = rooms[0];
+  const exitDoorBaseMaterial = exitDoor.material;
 
   const controlConsole = BABYLON.MeshBuilder.CreateBox('spyConsole', { width: 3, height: 1, depth: 1.2 }, scene);
   controlConsole.position = new BABYLON.Vector3(2, 1, 2);
@@ -122,6 +123,7 @@ export function createSpyIsland(scene, materials, shadowGenerator, interactionMa
     insideBase = false;
     camera.parent = null;
     camera.position = root.position.add(new BABYLON.Vector3(0, 22, 12));
+    exitDoor.material = exitDoorBaseMaterial;
     hud.pushNotification('You step back into the island breeze.', 'info', 2400);
   };
 
@@ -148,9 +150,20 @@ export function createSpyIsland(scene, materials, shadowGenerator, interactionMa
     }
   });
 
+  const exitDoorHighlight = materials.doorHighlight;
+
   interactionManager.register(exitDoor, {
     prompt: 'Press E to exit to the island',
     tooltip: '<strong>Surface Exit</strong><br/>Return to the portal.',
+    highlightColor: exitDoorHighlight?.emissiveColor,
+    onFocus: () => {
+      if (exitDoorHighlight) {
+        exitDoor.material = exitDoorHighlight;
+      }
+    },
+    onBlur: () => {
+      exitDoor.material = exitDoorBaseMaterial;
+    },
     action: exitBase
   });
 

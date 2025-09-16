@@ -52,6 +52,22 @@ export function createSkyscraper(scene, materials, shadowGenerator, interactionM
   elevatorDoor.material = materials.metal.clone('elevatorDoorMat');
   elevatorDoor.material.albedoColor = new BABYLON.Color3(0.3, 0.32, 0.36);
   elevatorDoor.parent = root;
+  const elevatorDoorBaseMaterial = elevatorDoor.material;
+  const elevatorDoorHighlight = materials.doorHighlight;
+
+  if (interactionManager && elevatorDoorHighlight) {
+    interactionManager.register(elevatorDoor, {
+      prompt: null,
+      range: 4,
+      highlightColor: elevatorDoorHighlight.emissiveColor,
+      onFocus: () => {
+        elevatorDoor.material = elevatorDoorHighlight;
+      },
+      onBlur: () => {
+        elevatorDoor.material = elevatorDoorBaseMaterial;
+      }
+    });
+  }
 
   const levelOffsets = [1.4, 13.4, 25.4];
   const floorLabels = ['Innovation Lab', 'Sky Lounge', 'Observation Deck'];

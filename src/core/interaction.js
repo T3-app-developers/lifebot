@@ -75,8 +75,12 @@ export function createInteractionManager(scene, camera, hud) {
         const range = cfg.range || DEFAULT_RANGE;
         if (pick.distance <= range) {
           focusTarget(data);
-          const prompt = cfg.prompt || 'Press E to interact';
-          hud.showPrompt(prompt);
+          const prompt = cfg.prompt ?? 'Press E to interact';
+          if (prompt) {
+            hud.showPrompt(prompt);
+          } else {
+            hud.hidePrompt();
+          }
           if (cfg.tooltip) {
             hud.showTooltip(cfg.tooltip, window.innerWidth / 2, window.innerHeight / 2);
           } else {

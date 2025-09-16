@@ -1,4 +1,4 @@
-function buildHouse(scene, materials, shadowGenerator, name, position) {
+function buildHouse(scene, materials, shadowGenerator, interactionManager, name, position) {
   const house = new BABYLON.TransformNode(name, scene);
   house.position.copyFrom(position);
 
@@ -22,6 +22,22 @@ function buildHouse(scene, materials, shadowGenerator, name, position) {
   door.material = materials.wood.clone(`${name}_doorMat`);
   door.material.albedoColor = new BABYLON.Color3(0.35, 0.25, 0.18);
   door.parent = house;
+
+  const doorBaseMaterial = door.material;
+  const highlightMaterial = materials.doorHighlight;
+  if (interactionManager && highlightMaterial) {
+    interactionManager.register(door, {
+      prompt: null,
+      range: 4.5,
+      highlightColor: highlightMaterial.emissiveColor,
+      onFocus: () => {
+        door.material = highlightMaterial;
+      },
+      onBlur: () => {
+        door.material = doorBaseMaterial;
+      }
+    });
+  }
 
   const windowLeft = BABYLON.MeshBuilder.CreatePlane(`${name}_windowL`, { width: 2, height: 1.4 }, scene);
   windowLeft.position = new BABYLON.Vector3(-3, 2, 4.02);
@@ -239,7 +255,7 @@ export function createTown(scene, materials, shadowGenerator, interactionManager
   ];
 
   housePositions.forEach((pos, idx) => {
-    const result = buildHouse(scene, materials, shadowGenerator, `house_${idx}`, pos);
+    const result = buildHouse(scene, materials, shadowGenerator, interactionManager, `house_${idx}`, pos);
     result.node.parent = town;
     houses.push(result);
   });
