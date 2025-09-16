@@ -2,7 +2,7 @@
 // Babylon.js utility
 // Creates a compact multi-sport stadium with seating and interactive seats.
 
-function createLifeBotStadium(scene, opts) {
+export function createLifeBotStadium(scene, opts) {
   opts = opts || {};
   var infieldRadius = opts.infieldRadius || 40;
   var seatRows = opts.seatRows || 10;
@@ -263,6 +263,63 @@ function createLifeBotStadium(scene, opts) {
   }
 
   var signR = wallInnerR + wallThickness + 0.2;
+  var scoreboard = BABYLON.MeshBuilder.CreatePlane("stadiumScoreboard", { width: 12, height: 6 }, scene);
+  scoreboard.position = new BABYLON.Vector3(0, wallHeight + 6, wallInnerR + 3);
+  scoreboard.rotation.x = -Math.PI / 10;
+  var scoreboardTex = new BABYLON.DynamicTexture("stadiumScoreTex", { width: 1024, height: 512 }, scene, true);
+  var scoreboardMat = new BABYLON.StandardMaterial("stadiumScoreMat", scene);
+  scoreboardMat.diffuseTexture = scoreboardTex;
+  scoreboardMat.emissiveColor = new BABYLON.Color3(0.2, 0.8, 1);
+  scoreboard.material = scoreboardMat;
+  scoreboard.parent = root;
+
+  var scoreboardState = { home: 0, away: 0, period: 1, message: "Welcome" };
+  function drawScoreboard() {
+    var ctx = scoreboardTex.getContext();
+    ctx.fillStyle = "#091220";
+    ctx.fillRect(0, 0, 1024, 512);
+    ctx.fillStyle = "#6ad6ff";
+    ctx.font = "bold 120px Inter";
+    ctx.textAlign = "center";
+    ctx.fillText("LIFEBOT", 512, 150);
+    ctx.font = "bold 160px Inter";
+    ctx.fillText(scoreboardState.home + " : " + scoreboardState.away, 512, 300);
+    ctx.font = "bold 64px Inter";
+    ctx.fillText("Period " + scoreboardState.period, 256, 420);
+    ctx.fillText(scoreboardState.message, 768, 420);
+    scoreboardTex.update(false);
+  }
+  drawScoreboard();
+
+  var scoreboardLight = new BABYLON.SpotLight("scoreboardLight", new BABYLON.Vector3(0, wallHeight + 10, wallInnerR - 4), new BABYLON.Vector3(0, -0.6, 1), Math.PI / 3, 2, scene);
+  scoreboardLight.intensity = 1.2;
+
+  var cheerParticles = new BABYLON.ParticleSystem("stadiumCheer", 2000, scene);
+  cheerParticles.particleTexture = new BABYLON.Texture('https://assets.babylonjs.com/particles/flare.png', scene);
+  cheerParticles.emitter = new BABYLON.Vector3(0, wallHeight + 4, 0);
+  cheerParticles.minEmitBox = new BABYLON.Vector3(-10, 0, -10);
+  cheerParticles.maxEmitBox = new BABYLON.Vector3(10, 0, 10);
+  cheerParticles.color1 = new BABYLON.Color4(0.2, 0.6, 1, 1);
+  cheerParticles.color2 = new BABYLON.Color4(0.9, 0.6, 0.2, 1);
+  cheerParticles.minSize = 0.3;
+  cheerParticles.maxSize = 0.8;
+  cheerParticles.minLifeTime = 0.4;
+  cheerParticles.maxLifeTime = 1.2;
+  cheerParticles.emitRate = 0;
+  cheerParticles.start();
+
+  var crowdAmbience = new BABYLON.Sound('stadiumCrowd', 'https://cdn.pixabay.com/download/audio/2021/11/15/audio_9c2c9b499d.mp3?filename=stadium-ambience-1-126380.mp3', scene, function(){}, { loop: true, autoplay: true, volume: 0.25 });
+
+  function triggerCheer(deltaHome, deltaAway, message) {
+    scoreboardState.home = Math.max(0, scoreboardState.home + (deltaHome || 0));
+    scoreboardState.away = Math.max(0, scoreboardState.away + (deltaAway || 0));
+    if (message) scoreboardState.message = message;
+    scoreboardState.period = Math.min(9, scoreboardState.period + 1);
+    drawScoreboard();
+    cheerParticles.emitRate = 600;
+    setTimeout(function(){ cheerParticles.emitRate = 0; }, 1200);
+  }
+
   var sign = BABYLON.MeshBuilder.CreateTorus("entranceSign", { diameter: 2.4, thickness: 0.08, tessellation: 24, arc: 0.5 }, scene);
   sign.position = new BABYLON.Vector3(Math.cos(entranceCenter)*signR, 2.6, Math.sin(entranceCenter)*signR);
   sign.rotation.y = entranceCenter;
@@ -273,10 +330,10 @@ function createLifeBotStadium(scene, opts) {
     root: root,
     infield: infield,
     courts: { soccer1: soccer1, soccer2: soccer2, tennis1: tennis1, tennis2: tennis2, hockey: hockey },
-    seating: seatsRoot
+    seating: seatsRoot,
+    triggerCheer: triggerCheer,
+    scoreboardState: scoreboardState
   };
 }
 
-// expose globally
-window.createLifeBotStadium = createLifeBotStadium;
 

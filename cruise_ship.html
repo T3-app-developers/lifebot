@@ -3,28 +3,91 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Cruise Ship Demo</title>
+  <title>Cruise Ship Experience</title>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <style>
-    body { font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, 'Helvetica Neue', Arial; margin:0; padding:24px; background:#0b1220; color:#e8ecf1; }
-    h1 { font-size:20px; font-weight:700; margin:0 0 12px; }
-    .row { display:grid; grid-template-columns:1fr 320px; gap:16px; }
-    pre { background:#0e1629; color:#b9c4d4; padding:12px; border-radius:12px; overflow-x:auto; border:1px solid #18233d; }
-    .card { background:#0e1629; border:1px solid #18233d; border-radius:16px; padding:12px; }
-    .muted { color:#9fb1c9; }
-    button { appearance:none; border:1px solid #203055; background:#132045; color:#e9f0fb; border-radius:12px; padding:8px 12px; cursor:pointer; font-weight:600; }
-    button:hover{ filter:brightness(1.1); }
-    .stack { display:flex; flex-wrap:wrap; gap:8px; }
+    :root {
+      font-family: 'Inter', 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
+      color-scheme: dark;
+    }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background: radial-gradient(circle at 20% 20%, #111b32, #050914 70%);
+      color: #eef6ff;
+      display: grid;
+      place-items: center;
+      padding: 32px;
+    }
+    .shell {
+      width: min(1100px, 100%);
+      display: grid;
+      grid-template-columns: 2fr 1fr;
+      gap: 24px;
+    }
+    cruise-ship-item {
+      height: 640px;
+      border-radius: 24px;
+    }
+    .panel {
+      background: rgba(10, 18, 34, 0.85);
+      border: 1px solid rgba(110, 214, 255, 0.3);
+      border-radius: 20px;
+      padding: 24px;
+      display: grid;
+      gap: 18px;
+      box-shadow: 0 28px 60px rgba(0,0,0,0.45);
+      backdrop-filter: blur(14px);
+    }
+    h1 {
+      margin: 0;
+      font-size: 28px;
+      font-weight: 600;
+    }
+    p { margin: 0; color: #9cb3d9; line-height: 1.5; }
+    button {
+      appearance: none;
+      border: 1px solid rgba(110,214,255,0.35);
+      border-radius: 12px;
+      background: rgba(14,26,44,0.85);
+      color: #eef6ff;
+      font-weight: 600;
+      padding: 10px 14px;
+      cursor: pointer;
+      transition: transform 0.16s ease, border-color 0.16s ease;
+    }
+    button:hover { transform: translateY(-1px); border-color: rgba(106,214,255,0.6); }
+    .stack { display: flex; flex-wrap: wrap; gap: 10px; }
+    pre {
+      margin: 0;
+      padding: 18px;
+      background: rgba(9, 16, 28, 0.9);
+      border-radius: 14px;
+      border: 1px solid rgba(106,214,255,0.25);
+      color: #9fb1c9;
+      max-height: 280px;
+      overflow-y: auto;
+      font-size: 13px;
+      line-height: 1.5;
+    }
+    @media (max-width: 960px) {
+      .shell { grid-template-columns: 1fr; }
+      cruise-ship-item { height: 520px; }
+    }
   </style>
   <script type="module" src="cruise-ship-item.js"></script>
 </head>
 <body>
-  <h1>🚢 CruiseShipItem Demo</h1>
-  <div class="row">
-    <cruise-ship-item id="ship" scale="1" deck="ext" style="width:100%;height:600px;display:block;"></cruise-ship-item>
-    <div class="card">
+  <div class="shell">
+    <cruise-ship-item id="ship" scale="1" deck="ext"></cruise-ship-item>
+    <div class="panel">
+      <div>
+        <h1>🚢 Cruise Ship Concierge</h1>
+        <p>Preview the Lifebot Cruise decks, trigger doorway animations, and listen for the ambient waves that tie the experience back into the main game.</p>
+      </div>
       <div class="stack">
-        <button onclick="ship.openDoor()">Open Door</button>
-        <button onclick="ship.closeDoor()">Close Door</button>
+        <button onclick="ship.openDoor()">Toggle Door</button>
         <button onclick="ship.enter()">Enter Ship</button>
         <button onclick="ship.exit()">Exit Ship</button>
         <button onclick="ship.setDeck('1')">Deck 1</button>
@@ -34,7 +97,6 @@
         <button onclick="ship.setDeck('bridge')">Bridge</button>
         <button onclick="ship.resetInventory()">Clear Inventory</button>
       </div>
-      <h3 class="muted" style="margin-top:12px;">Events</h3>
       <pre id="log">(events will appear here)</pre>
     </div>
   </div>
@@ -42,12 +104,12 @@
   <script>
     const logEl = document.getElementById('log');
     const ship = document.getElementById('ship');
-    const push = (msg)=>{ logEl.textContent = (msg + "\n" + logEl.textContent).slice(0,2000); };
+    const push = (msg)=>{ const time = new Date().toLocaleTimeString(); logEl.textContent = `[${time}] ${msg}\n` + logEl.textContent; };
     ship.addEventListener('pickup', e => push('pickup: ' + JSON.stringify(e.detail)));
     ship.addEventListener('consume', e => push('consume: ' + JSON.stringify(e.detail)));
     ship.addEventListener('door', e => push('door: ' + JSON.stringify(e.detail)));
-    ship.addEventListener('enter', e => push('enter interior'));
-    ship.addEventListener('exit', e => push('exit to exterior'));
+    ship.addEventListener('enter', () => push('enter interior'));
+    ship.addEventListener('exit', () => push('exit to exterior'));
     ship.addEventListener('helm', e => push('helm: ' + JSON.stringify(e.detail)));
   </script>
 </body>
