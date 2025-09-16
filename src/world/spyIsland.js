@@ -132,9 +132,55 @@ export function createSpyIsland(scene, materials, shadowGenerator, interactionMa
     hud.pushNotification(`Spy platform aligned to Level ${idx + 1}.`, 'info', 2400);
   };
 
-  interactionManager.register(portal, {
-    prompt: 'Press E to sync with the spy portal',
-    tooltip: '<strong>Spy Portal</strong><br/>Requires clearance and FlameBot authorization.',
+  const portalRequirements = [
+    { flag: 'spy-clearance', label: 'Buy clearance badge' },
+    { flag: 'spy-briefing', label: 'Complete harbor briefing' }
+  ];
+
+  const listRequirements = (items) => {
+    if (items.length === 0) return '';
+    if (items.length === 1) return items[0];
+    return `${items.slice(0, -1).join(', ')} and ${items[items.length - 1]}`;
+  };
+
+  const missingPortalRequirements = () =>
+    portalRequirements.filter(req => !gameState.hasFlag(req.flag)).map(req => req.label);
+
+  const basePortalPrompt = 'Press E to sync with the spy portal';
+
+  let portalConfig;
+  let lastPortalWarningAt = 0;
+
+  const updatePortalUi = () => {
+    if (!portalConfig) return;
+    const missing = missingPortalRequirements();
+    portalConfig.prompt = missing.length
+      ? `${basePortalPrompt} — Missing: ${listRequirements(missing)}`
+      : basePortalPrompt;
+
+    const requirementBlock = missing.length
+      ? `<br/><em>Missing Access:</em><br/>${missing.map(item => `&bull; ${item}`).join('<br/>')}`
+      : '<br/>All access flags detected.';
+
+    portalConfig.tooltip = `<strong>Spy Portal</strong><br/>Requires clearance and FlameBot authorization.${requirementBlock}`;
+  };
+
+  const notifyPortalRestriction = () => {
+    const missing = missingPortalRequirements();
+    if (!missing.length) return;
+    const now = Date.now();
+    if (now - lastPortalWarningAt < 6000) return;
+    hud.pushNotification(`Portal access blocked: ${listRequirements(missing)}.`, 'warning', 3200);
+    lastPortalWarningAt = now;
+  };
+
+  portalConfig = {
+    prompt: basePortalPrompt,
+    tooltip: '',
+    onFocus: () => {
+      updatePortalUi();
+      notifyPortalRestriction();
+    },
     action: () => {
       if (!gameState.hasFlag('spy-clearance')) {
         hud.pushNotification('A hidden scanner rejects you. Acquire a clearance badge from the shop.', 'danger', 3600);
@@ -146,7 +192,11 @@ export function createSpyIsland(scene, materials, shadowGenerator, interactionMa
       }
       moveInside();
     }
-  });
+  };
+
+  interactionManager.register(portal, portalConfig);
+  updatePortalUi();
+  gameState.addEventListener('flags', updatePortalUi);
 
   interactionManager.register(exitDoor, {
     prompt: 'Press E to exit to the island',
