@@ -77,6 +77,12 @@ export function createMaterials(scene) {
   emissive.emissiveColor = new BABYLON.Color3(0.9, 0.6, 1);
   emissive.alpha = 0.9;
 
+  const doorHighlight = new BABYLON.PBRMaterial('doorHighlightMat', scene);
+  doorHighlight.albedoColor = new BABYLON.Color3(0.55, 0.7, 0.95);
+  doorHighlight.emissiveColor = new BABYLON.Color3(0.35, 0.75, 1.0);
+  doorHighlight.metallic = 0.2;
+  doorHighlight.roughness = 0.35;
+
   const glowLayer = new BABYLON.GlowLayer('globalGlow', scene, {
     blurKernelSize: 32
   });
@@ -91,6 +97,7 @@ export function createMaterials(scene) {
     neon,
     glass,
     emissive,
+    doorHighlight,
     glowLayer
   };
 }
