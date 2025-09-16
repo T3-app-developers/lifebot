@@ -81,6 +81,10 @@
     const canvas = document.getElementById('renderCanvas');
     const engine = new BABYLON.Engine(canvas, true);
 
+    if(location.protocol === 'file:'){
+      alert('Please run a local web server or use the Netlify deployment URL so assets load correctly.');
+    }
+
     const gameState = { coins: 10, heldItem: null };
     const coinEl = document.getElementById('coinCount');
 
