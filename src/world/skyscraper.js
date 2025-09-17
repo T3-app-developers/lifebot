@@ -20,14 +20,39 @@ export function createSkyscraper(scene, materials, shadowGenerator, interactionM
   const baseY = ground ? ground.getHeightAtCoordinates(0, 52) : 0;
   root.position = new BABYLON.Vector3(0, baseY, 52);
 
-  const tower = BABYLON.MeshBuilder.CreateBox('skyscraperTower', { width: 14, depth: 14, height: 36 }, scene);
+  const doorOpeningWidth = 3.8;
+  const doorOpeningHeight = 4.2;
+  const doorDepth = 0.25;
+
+  let tower = BABYLON.MeshBuilder.CreateBox('skyscraperTower', { width: 14, depth: 14, height: 36 }, scene);
   tower.position.y = 18;
   tower.material = materials.brick.clone('skyscraperSkin');
   tower.material.albedoColor = new BABYLON.Color3(0.6, 0.7, 0.85);
-  tower.checkCollisions = true;
-  tower.receiveShadows = true;
   tower.parent = root;
-  shadowGenerator?.addShadowCaster(tower);
+
+  const lobbyDoorCut = BABYLON.MeshBuilder.CreateBox('skyscraperDoorCut', {
+    width: doorOpeningWidth + 0.4,
+    height: doorOpeningHeight + 0.4,
+    depth: doorDepth + 1.6
+  }, scene);
+  lobbyDoorCut.parent = root;
+  lobbyDoorCut.position = new BABYLON.Vector3(0, doorOpeningHeight / 2, 6.9);
+  lobbyDoorCut.isVisible = false;
+
+  const towerCSG = BABYLON.CSG.FromMesh(tower);
+  const doorCSG = BABYLON.CSG.FromMesh(lobbyDoorCut);
+  const carvedTower = towerCSG.subtract(doorCSG).toMesh(tower.name, tower.material, scene);
+  carvedTower.position = tower.position.clone();
+  carvedTower.rotation = tower.rotation.clone();
+  carvedTower.scaling = tower.scaling.clone();
+  carvedTower.parent = root;
+  carvedTower.checkCollisions = true;
+  carvedTower.receiveShadows = true;
+  shadowGenerator?.addShadowCaster(carvedTower);
+
+  tower.dispose();
+  lobbyDoorCut.dispose();
+  tower = carvedTower;
 
   const glassStrip = BABYLON.MeshBuilder.CreateBox('skyscraperGlass', { width: 13.6, depth: 13.6, height: 1 }, scene);
   glassStrip.position.y = 19;
@@ -38,6 +63,105 @@ export function createSkyscraper(scene, materials, shadowGenerator, interactionM
   lobby.position.y = 0.3;
   lobby.material = materials.plaza.clone('skyscraperLobby');
   lobby.parent = root;
+
+  const lobbyDoorRoot = new BABYLON.TransformNode('skyscraperLobbyDoorRoot', scene);
+  lobbyDoorRoot.parent = root;
+  lobbyDoorRoot.position = new BABYLON.Vector3(0, doorOpeningHeight / 2, 7 + doorDepth / 2);
+
+  const lobbyDoorMaterial = materials.glass.clone('skyscraperLobbyDoorMat');
+  lobbyDoorMaterial.alpha = 0.9;
+
+  const lobbyDoorPanelWidth = doorOpeningWidth / 2;
+  const lobbyDoorSlide = lobbyDoorPanelWidth + 0.6;
+
+  const lobbyDoorLeft = BABYLON.MeshBuilder.CreateBox('skyscraperLobbyDoorLeft', {
+    width: lobbyDoorPanelWidth,
+    height: doorOpeningHeight,
+    depth: doorDepth
+  }, scene);
+  lobbyDoorLeft.material = lobbyDoorMaterial;
+  lobbyDoorLeft.parent = lobbyDoorRoot;
+  lobbyDoorLeft.position = new BABYLON.Vector3(-lobbyDoorPanelWidth / 2, 0, 0);
+  lobbyDoorLeft.checkCollisions = true;
+  shadowGenerator?.addShadowCaster(lobbyDoorLeft);
+
+  const lobbyDoorRight = lobbyDoorLeft.clone('skyscraperLobbyDoorRight');
+  lobbyDoorRight.position.x = lobbyDoorPanelWidth / 2;
+  lobbyDoorRight.checkCollisions = true;
+  shadowGenerator?.addShadowCaster(lobbyDoorRight);
+
+  const lobbyDoorLeftAnim = new BABYLON.Animation('skyscraperLobbyDoorLeftAnim', 'position.x', 60, BABYLON.Animation.ANIMATIONTYPE_FLOAT, BABYLON.Animation.ANIMATIONLOOPMODE_CONSTANT);
+  lobbyDoorLeftAnim.setKeys([
+    { frame: 0, value: -lobbyDoorPanelWidth / 2 },
+    { frame: 30, value: -lobbyDoorPanelWidth / 2 - lobbyDoorSlide }
+  ]);
+  lobbyDoorLeft.animations = [lobbyDoorLeftAnim];
+
+  const lobbyDoorRightAnim = new BABYLON.Animation('skyscraperLobbyDoorRightAnim', 'position.x', 60, BABYLON.Animation.ANIMATIONTYPE_FLOAT, BABYLON.Animation.ANIMATIONLOOPMODE_CONSTANT);
+  lobbyDoorRightAnim.setKeys([
+    { frame: 0, value: lobbyDoorPanelWidth / 2 },
+    { frame: 30, value: lobbyDoorPanelWidth / 2 + lobbyDoorSlide }
+  ]);
+  lobbyDoorRight.animations = [lobbyDoorRightAnim];
+
+  const lobbyDoorPanels = [lobbyDoorLeft, lobbyDoorRight];
+  const lobbyDoorState = { open: false, animating: false };
+
+  const animateLobbyDoor = (from, to, onEnd) => {
+    let completed = 0;
+    const total = lobbyDoorPanels.length;
+    const handleDone = () => {
+      completed += 1;
+      if (completed === total) onEnd?.();
+    };
+    const results = [];
+    const leftAnim = scene.beginDirectAnimation(lobbyDoorLeft, [lobbyDoorLeftAnim], from, to, false);
+    leftAnim.onAnimationEndObservable.addOnce(handleDone);
+    results.push(leftAnim);
+    const rightAnim = scene.beginDirectAnimation(lobbyDoorRight, [lobbyDoorRightAnim], from, to, false);
+    rightAnim.onAnimationEndObservable.addOnce(handleDone);
+    results.push(rightAnim);
+    return results;
+  };
+
+  const openLobbyDoor = () => {
+    if (lobbyDoorState.open || lobbyDoorState.animating) return null;
+    lobbyDoorState.animating = true;
+    lobbyDoorPanels.forEach(panel => (panel.checkCollisions = false));
+    return animateLobbyDoor(0, 30, () => {
+      lobbyDoorState.open = true;
+      lobbyDoorState.animating = false;
+    });
+  };
+
+  const closeLobbyDoor = () => {
+    if (!lobbyDoorState.open || lobbyDoorState.animating) return null;
+    lobbyDoorState.animating = true;
+    return animateLobbyDoor(30, 0, () => {
+      lobbyDoorState.open = false;
+      lobbyDoorState.animating = false;
+      lobbyDoorPanels.forEach(panel => (panel.checkCollisions = true));
+    });
+  };
+
+  const toggleLobbyDoor = () => (lobbyDoorState.open ? closeLobbyDoor() : openLobbyDoor());
+
+  const lobbyDoor = {
+    panels: lobbyDoorPanels,
+    root: lobbyDoorRoot,
+    open: openLobbyDoor,
+    close: closeLobbyDoor,
+    toggle: toggleLobbyDoor,
+    state: lobbyDoorState
+  };
+
+  lobbyDoor.panels.forEach(panel => {
+    interactionManager.register(panel, {
+      prompt: 'Press E to enter',
+      tooltip: '<strong>Skyscraper Lobby</strong><br/>Slide the glass entry doors to reach the elevator.',
+      action: () => lobbyDoor.toggle()
+    });
+  });
 
   const elevator = BABYLON.MeshBuilder.CreateBox('skyscraperElevator', { width: 3, depth: 3, height: 2.2 }, scene);
   elevator.position = new BABYLON.Vector3(0, 1.4, 4);
@@ -161,5 +285,5 @@ export function createSkyscraper(scene, materials, shadowGenerator, interactionM
     });
   });
 
-  return { root, elevator, panel, rideToLevel };
+  return { root, elevator, panel, rideToLevel, lobbyDoor };
 }

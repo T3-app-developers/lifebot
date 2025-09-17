@@ -2,13 +2,38 @@ function buildHouse(scene, materials, shadowGenerator, name, position) {
   const house = new BABYLON.TransformNode(name, scene);
   house.position.copyFrom(position);
 
-  const base = BABYLON.MeshBuilder.CreateBox(`${name}_base`, { width: 10, depth: 8, height: 4 }, scene);
+  const doorWidth = 1.6;
+  const doorHeight = 2.6;
+  const doorDepth = 0.2;
+
+  let base = BABYLON.MeshBuilder.CreateBox(`${name}_base`, { width: 10, depth: 8, height: 4 }, scene);
   base.material = materials.brick;
   base.position.y = 2;
   base.parent = house;
-  base.checkCollisions = true;
-  base.receiveShadows = true;
-  shadowGenerator?.addShadowCaster(base);
+
+  const doorCut = BABYLON.MeshBuilder.CreateBox(`${name}_doorCut`, {
+    width: doorWidth + 0.4,
+    height: doorHeight + 0.4,
+    depth: doorDepth + 0.8
+  }, scene);
+  doorCut.parent = house;
+  doorCut.position = new BABYLON.Vector3(0, doorHeight / 2, 3.9);
+  doorCut.isVisible = false;
+
+  const baseCSG = BABYLON.CSG.FromMesh(base);
+  const doorCSG = BABYLON.CSG.FromMesh(doorCut);
+  const carvedBase = baseCSG.subtract(doorCSG).toMesh(base.name, base.material, scene);
+  carvedBase.position = base.position.clone();
+  carvedBase.rotation = base.rotation.clone();
+  carvedBase.scaling = base.scaling.clone();
+  carvedBase.parent = house;
+  carvedBase.checkCollisions = true;
+  carvedBase.receiveShadows = true;
+  shadowGenerator?.addShadowCaster(carvedBase);
+
+  base.dispose();
+  doorCut.dispose();
+  base = carvedBase;
 
   const roof = BABYLON.MeshBuilder.CreateCylinder(`${name}_roof`, { diameter: 12, height: 2.2, tessellation: 6 }, scene);
   roof.rotation.z = Math.PI / 2;
@@ -17,11 +42,55 @@ function buildHouse(scene, materials, shadowGenerator, name, position) {
   roof.parent = house;
   shadowGenerator?.addShadowCaster(roof);
 
-  const door = BABYLON.MeshBuilder.CreateBox(`${name}_door`, { width: 1.6, height: 2.6, depth: 0.2 }, scene);
-  door.position = new BABYLON.Vector3(0, 1.3, 4.1);
+  const doorPivot = new BABYLON.TransformNode(`${name}_doorPivot`, scene);
+  doorPivot.parent = house;
+  doorPivot.position = new BABYLON.Vector3(-doorWidth / 2, doorHeight / 2, 4 + doorDepth / 2);
+
+  const door = BABYLON.MeshBuilder.CreateBox(`${name}_door`, { width: doorWidth, height: doorHeight, depth: doorDepth }, scene);
   door.material = materials.wood.clone(`${name}_doorMat`);
   door.material.albedoColor = new BABYLON.Color3(0.35, 0.25, 0.18);
-  door.parent = house;
+  door.parent = doorPivot;
+  door.position = new BABYLON.Vector3(doorWidth / 2, 0, 0);
+  door.checkCollisions = true;
+  shadowGenerator?.addShadowCaster(door);
+
+  const doorSwing = new BABYLON.Animation(`${name}_doorSwing`, 'rotation.y', 60, BABYLON.Animation.ANIMATIONTYPE_FLOAT, BABYLON.Animation.ANIMATIONLOOPMODE_CONSTANT);
+  doorSwing.setKeys([
+    { frame: 0, value: 0 },
+    { frame: 30, value: -Math.PI / 2 }
+  ]);
+  doorPivot.animations = [doorSwing];
+
+  const doorState = { open: false, animating: false };
+  const animateDoor = (from, to, onEnd) => {
+    const animatable = scene.beginDirectAnimation(doorPivot, [doorSwing], from, to, false);
+    animatable.onAnimationEndObservable.addOnce(() => {
+      onEnd?.();
+    });
+    return animatable;
+  };
+
+  const openDoor = () => {
+    if (doorState.open || doorState.animating) return null;
+    doorState.animating = true;
+    door.checkCollisions = false;
+    return animateDoor(0, 30, () => {
+      doorState.open = true;
+      doorState.animating = false;
+    });
+  };
+
+  const closeDoor = () => {
+    if (!doorState.open || doorState.animating) return null;
+    doorState.animating = true;
+    return animateDoor(30, 0, () => {
+      doorState.open = false;
+      doorState.animating = false;
+      door.checkCollisions = true;
+    });
+  };
+
+  const toggleDoor = () => (doorState.open ? closeDoor() : openDoor());
 
   const windowLeft = BABYLON.MeshBuilder.CreatePlane(`${name}_windowL`, { width: 2, height: 1.4 }, scene);
   windowLeft.position = new BABYLON.Vector3(-3, 2, 4.02);
@@ -79,20 +148,57 @@ function buildHouse(scene, materials, shadowGenerator, name, position) {
   ]);
   water.animations = [anim];
 
-  return { node: house, sink, water };
+  return {
+    node: house,
+    sink,
+    water,
+    door: {
+      mesh: door,
+      pivot: doorPivot,
+      open: openDoor,
+      close: closeDoor,
+      toggle: toggleDoor,
+      state: doorState
+    }
+  };
 }
 
 function createShop(scene, materials, shadowGenerator, position) {
   const shop = new BABYLON.TransformNode('townShop', scene);
   shop.position.copyFrom(position);
 
-  const frame = BABYLON.MeshBuilder.CreateBox('shopFrame', { width: 14, depth: 10, height: 5 }, scene);
+  const doorOpeningWidth = 3.6;
+  const doorOpeningHeight = 3.2;
+  const doorDepth = 0.2;
+
+  let frame = BABYLON.MeshBuilder.CreateBox('shopFrame', { width: 14, depth: 10, height: 5 }, scene);
   frame.material = materials.brick;
   frame.position.y = 2.5;
   frame.parent = shop;
-  frame.checkCollisions = true;
-  frame.receiveShadows = true;
-  shadowGenerator?.addShadowCaster(frame);
+
+  const shopDoorCut = BABYLON.MeshBuilder.CreateBox('shopDoorCut', {
+    width: doorOpeningWidth + 0.4,
+    height: doorOpeningHeight + 0.3,
+    depth: doorDepth + 1.2
+  }, scene);
+  shopDoorCut.parent = shop;
+  shopDoorCut.position = new BABYLON.Vector3(0, doorOpeningHeight / 2, 4.9);
+  shopDoorCut.isVisible = false;
+
+  const frameCSG = BABYLON.CSG.FromMesh(frame);
+  const shopDoorCSG = BABYLON.CSG.FromMesh(shopDoorCut);
+  const carvedFrame = frameCSG.subtract(shopDoorCSG).toMesh(frame.name, frame.material, scene);
+  carvedFrame.position = frame.position.clone();
+  carvedFrame.rotation = frame.rotation.clone();
+  carvedFrame.scaling = frame.scaling.clone();
+  carvedFrame.parent = shop;
+  carvedFrame.checkCollisions = true;
+  carvedFrame.receiveShadows = true;
+  shadowGenerator?.addShadowCaster(carvedFrame);
+
+  frame.dispose();
+  shopDoorCut.dispose();
+  frame = carvedFrame;
 
   const awning = BABYLON.MeshBuilder.CreateBox('shopAwning', { width: 14, depth: 1.6, height: 0.4 }, scene);
   awning.position = new BABYLON.Vector3(0, 4.6, 5.3);
@@ -126,6 +232,84 @@ function createShop(scene, materials, shadowGenerator, position) {
   sign.material = signMat;
   sign.parent = shop;
 
+  const doorRoot = new BABYLON.TransformNode('shopDoorRoot', scene);
+  doorRoot.parent = shop;
+  doorRoot.position = new BABYLON.Vector3(0, doorOpeningHeight / 2, 5.05);
+
+  const doorMaterial = materials.glass.clone('shopDoorGlass');
+  doorMaterial.alpha = 0.82;
+
+  const doorPanelWidth = doorOpeningWidth / 2;
+  const slideDistance = 1.2;
+
+  const leftDoor = BABYLON.MeshBuilder.CreateBox('shopDoorLeft', { width: doorPanelWidth, height: doorOpeningHeight, depth: doorDepth }, scene);
+  leftDoor.material = doorMaterial;
+  leftDoor.parent = doorRoot;
+  leftDoor.position = new BABYLON.Vector3(-doorPanelWidth / 2, 0, 0);
+  leftDoor.checkCollisions = true;
+
+  const rightDoor = leftDoor.clone('shopDoorRight');
+  rightDoor.position.x = doorPanelWidth / 2;
+  rightDoor.checkCollisions = true;
+
+  const leftSlide = new BABYLON.Animation('shopDoorLeftSlide', 'position.x', 60, BABYLON.Animation.ANIMATIONTYPE_FLOAT, BABYLON.Animation.ANIMATIONLOOPMODE_CONSTANT);
+  leftSlide.setKeys([
+    { frame: 0, value: -doorPanelWidth / 2 },
+    { frame: 30, value: -doorPanelWidth / 2 - slideDistance }
+  ]);
+  leftDoor.animations = [leftSlide];
+
+  const rightSlide = new BABYLON.Animation('shopDoorRightSlide', 'position.x', 60, BABYLON.Animation.ANIMATIONTYPE_FLOAT, BABYLON.Animation.ANIMATIONLOOPMODE_CONSTANT);
+  rightSlide.setKeys([
+    { frame: 0, value: doorPanelWidth / 2 },
+    { frame: 30, value: doorPanelWidth / 2 + slideDistance }
+  ]);
+  rightDoor.animations = [rightSlide];
+
+  const doorPanels = [leftDoor, rightDoor];
+  const doorState = { open: false, animating: false };
+
+  const animatePanels = (from, to, onEnd) => {
+    let completed = 0;
+    const total = doorPanels.length;
+    const handleEnd = () => {
+      completed += 1;
+      if (completed === total) {
+        onEnd?.();
+      }
+    };
+    const results = [];
+    const leftAnim = scene.beginDirectAnimation(leftDoor, [leftSlide], from, to, false);
+    leftAnim.onAnimationEndObservable.addOnce(handleEnd);
+    results.push(leftAnim);
+    const rightAnim = scene.beginDirectAnimation(rightDoor, [rightSlide], from, to, false);
+    rightAnim.onAnimationEndObservable.addOnce(handleEnd);
+    results.push(rightAnim);
+    return results;
+  };
+
+  const openDoor = () => {
+    if (doorState.open || doorState.animating) return null;
+    doorState.animating = true;
+    doorPanels.forEach(panel => (panel.checkCollisions = false));
+    return animatePanels(0, 30, () => {
+      doorState.open = true;
+      doorState.animating = false;
+    });
+  };
+
+  const closeDoor = () => {
+    if (!doorState.open || doorState.animating) return null;
+    doorState.animating = true;
+    return animatePanels(30, 0, () => {
+      doorState.open = false;
+      doorState.animating = false;
+      doorPanels.forEach(panel => (panel.checkCollisions = true));
+    });
+  };
+
+  const toggleDoor = () => (doorState.open ? closeDoor() : openDoor());
+
   const items = [];
   const itemData = [
     { id: 'energy-drink', name: 'Energy Drink', price: 6, color: new BABYLON.Color3(0.7, 0.2, 0.8), description: 'Restores sprint instantly.' },
@@ -143,7 +327,19 @@ function createShop(scene, materials, shadowGenerator, position) {
     items.push(mesh);
   });
 
-  return { node: shop, items, sign };
+  return {
+    node: shop,
+    items,
+    sign,
+    door: {
+      panels: doorPanels,
+      root: doorRoot,
+      open: openDoor,
+      close: closeDoor,
+      toggle: toggleDoor,
+      state: doorState
+    }
+  };
 }
 
 function createFlameBot(scene, materials, shadowGenerator, position) {
@@ -242,10 +438,24 @@ export function createTown(scene, materials, shadowGenerator, interactionManager
     const result = buildHouse(scene, materials, shadowGenerator, `house_${idx}`, pos);
     result.node.parent = town;
     houses.push(result);
+
+    interactionManager.register(result.door.mesh, {
+      prompt: 'Press E to enter',
+      tooltip: `<strong>Townhouse ${idx + 1}</strong><br/>Swing the door open to step inside.`,
+      action: () => result.door.toggle()
+    });
   });
 
   const shop = createShop(scene, materials, shadowGenerator, new BABYLON.Vector3(0, sampleHeight(0, -18), -18));
   shop.node.parent = town;
+
+  shop.door.panels.forEach(panel => {
+    interactionManager.register(panel, {
+      prompt: 'Press E to enter',
+      tooltip: '<strong>Lifebot Supply</strong><br/>Slide the glass doors to browse new gadgets.',
+      action: () => shop.door.toggle()
+    });
+  });
 
   const flameBot = createFlameBot(scene, materials, shadowGenerator, new BABYLON.Vector3(-6, sampleHeight(-6, 0), 0));
   flameBot.parent = town;
