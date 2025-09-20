@@ -484,6 +484,10 @@ export function createTown(scene, materials, shadowGenerator, interactionManager
     prompt: 'Press E to collect fresh water',
     tooltip: '<strong>Clean Water</strong><br/>Use this sample to help FlameBot calibrate the fire system.',
     action: () => {
+      if (gameState.hasItem('water-sample')) {
+        hud.pushNotification('You already filled a purifier bottle. Deliver it before collecting more.', 'warning', 2600);
+        return null;
+      }
       gameState.addItem('water-sample', {
         name: 'Water Sample',
         quantity: 1,
@@ -539,12 +543,22 @@ export function createTown(scene, materials, shadowGenerator, interactionManager
     action: () => gameState.emit('job-board', {})
   });
 
+  const harvestCooldowns = new WeakMap();
+  const HARVEST_COOLDOWN_MS = 12000;
+
   if (terrainRefs?.cropRows) {
     terrainRefs.cropRows.forEach((row, idx) => {
       interactionManager.register(row, {
         prompt: 'Press E to harvest glow berries',
         tooltip: '<strong>Glow Berries</strong><br/>Deliver to merchants for a quick payout.',
         action: () => {
+          const now = (typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now();
+          const lastHarvest = harvestCooldowns.get(row) || 0;
+          if (now - lastHarvest < HARVEST_COOLDOWN_MS) {
+            hud.pushNotification('These glow berries need more time to regrow.', 'warning', 2200);
+            return;
+          }
+          harvestCooldowns.set(row, now);
           gameState.addItem('glow-berry', {
             name: 'Glow Berry',
             quantity: 2,
