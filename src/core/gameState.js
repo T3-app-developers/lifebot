@@ -9,6 +9,19 @@ export class GameState extends EventTarget {
     this.objectives = [];
     this.lastStatusLine = 'Explore Lifebot Town';
     this.hiddenSequence = [];
+    this.settings = {
+      gameplay: {
+        viewMode: 'first-person',
+        dinosaursEnabled: false
+      },
+      avatar: {
+        baseBody: 'bot-boy',
+        hairstyle: 'spiky',
+        top: 'retro-tee',
+        bottom: 'adventure',
+        accessory: 'none'
+      }
+    };
   }
 
   emit(name, detail = {}) {
@@ -131,5 +144,34 @@ export class GameState extends EventTarget {
       this.hiddenSequence.shift();
     }
     this.emit('key-press', { code, time: now, history: [...this.hiddenSequence] });
+  }
+
+  getSettings() {
+    return JSON.parse(JSON.stringify(this.settings));
+  }
+
+  updateGameplaySettings(changes = {}) {
+    this.settings.gameplay = { ...this.settings.gameplay, ...changes };
+    this.emit('settings-change', {
+      category: 'gameplay',
+      changes: { ...changes },
+      settings: this.getSettings()
+    });
+  }
+
+  updateAvatarSettings(changes = {}) {
+    this.settings.avatar = { ...this.settings.avatar, ...changes };
+    this.emit('settings-change', {
+      category: 'avatar',
+      changes: { ...changes },
+      settings: this.getSettings()
+    });
+  }
+
+  setAvatarOption(key, value) {
+    if (!Object.prototype.hasOwnProperty.call(this.settings.avatar, key)) {
+      return;
+    }
+    this.updateAvatarSettings({ [key]: value });
   }
 }
