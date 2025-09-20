@@ -90,6 +90,10 @@ export function createQuestManager({ gameState, hud, interactionManager }) {
   }
 
   function assignJob() {
+    if (activeJob) {
+      hud.pushNotification(`Current contract active: ${activeJob.label}`, 'info', 2600);
+      return;
+    }
     if (!jobsQueue.length) {
       hud.pushNotification('All town contracts are complete for today.', 'info', 2600);
       return;
@@ -169,6 +173,10 @@ export function createQuestManager({ gameState, hud, interactionManager }) {
     const job = e.detail.job;
     if (!job) return;
     if (job.id === 'deliver-energy') {
+      if (gameState.hasItem('energy-drink')) {
+        completeJob(job, 'Energy drink already on hand. Commentator thanks you instantly.');
+        return;
+      }
       hud.pushNotification('Find the commentator near the stadium scoreboard.', 'info', 2800);
     }
     if (job.id === 'stadium-cheer') {

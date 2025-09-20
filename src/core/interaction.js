@@ -3,8 +3,14 @@ const DEFAULT_RANGE = 5.5;
 function findInteractable(mesh) {
   let current = mesh;
   while (current) {
-    if (current.metadata && current.metadata.interactable) {
-      return { mesh: current, config: current.metadata.interactable };
+    const config = current.metadata?.interactable;
+    if (config) {
+      const owner = config.ownerMesh ?? current;
+      return {
+        mesh,
+        owner,
+        config
+      };
     }
     current = current.parent;
   }
@@ -21,23 +27,44 @@ export function createInteractionManager(scene, camera, hud) {
 
   let focused = null;
 
+  function applyHighlight(target) {
+    const highlightMesh =
+      target.config?.highlightMesh ||
+      (target.mesh instanceof BABYLON.AbstractMesh ? target.mesh : null) ||
+      (target.owner instanceof BABYLON.AbstractMesh ? target.owner : null);
+    target.highlightMesh = highlightMesh;
+    if (highlightMesh) {
+      highlightLayer.addMesh(
+        highlightMesh,
+        target.config?.highlightColor || BABYLON.Color3.FromHexString('#6ad6ff')
+      );
+    }
+  }
+
+  function removeHighlight(target) {
+    if (target?.highlightMesh) {
+      highlightLayer.removeMesh(target.highlightMesh);
+      target.highlightMesh = null;
+    }
+  }
+
   function focusTarget(target) {
-    if (focused?.mesh === target?.mesh) return;
+    if (focused?.mesh === target?.mesh && focused?.owner === target?.owner) return;
     if (focused) {
-      highlightLayer.removeMesh(focused.mesh);
-      focused.config?.onBlur?.();
+      removeHighlight(focused);
+      focused.config?.onBlur?.(focused);
     }
     focused = target;
     if (focused) {
-      highlightLayer.addMesh(focused.mesh, focused.config?.highlightColor || BABYLON.Color3.FromHexString('#6ad6ff'));
-      focused.config?.onFocus?.();
+      applyHighlight(focused);
+      focused.config?.onFocus?.(focused);
     }
   }
 
   function clearFocus() {
     if (focused) {
-      highlightLayer.removeMesh(focused.mesh);
-      focused.config?.onBlur?.();
+      removeHighlight(focused);
+      focused.config?.onBlur?.(focused);
       focused = null;
     }
     hud.hidePrompt();
@@ -47,14 +74,19 @@ export function createInteractionManager(scene, camera, hud) {
   const manager = {
     register(mesh, config = {}) {
       mesh.metadata = mesh.metadata || {};
-      mesh.metadata.interactable = { ...config };
+      const existing = mesh.metadata.interactable || {};
+      const combined = { ...existing, ...config };
+      combined.ownerMesh = mesh;
+      mesh.metadata.interactable = combined;
       interactables.add(mesh);
       return mesh;
     },
     unregister(mesh) {
       if (mesh.metadata) delete mesh.metadata.interactable;
       interactables.delete(mesh);
-      if (focused?.mesh === mesh) clearFocus();
+      if (focused && (focused.owner === mesh || focused.mesh === mesh)) {
+        clearFocus();
+      }
     },
     get focused() {
       return focused;
@@ -74,7 +106,8 @@ export function createInteractionManager(scene, camera, hud) {
         const cfg = data.config;
         const range = cfg.range || DEFAULT_RANGE;
         if (pick.distance <= range) {
-          focusTarget(data);
+          const target = { ...data };
+          focusTarget(target);
           const prompt = cfg.prompt ?? 'Press E to interact';
           if (prompt) {
             hud.showPrompt(prompt);
@@ -97,7 +130,8 @@ export function createInteractionManager(scene, camera, hud) {
   window.addEventListener('keydown', ev => {
     if (ev.repeat) return;
     if (ev.code === 'KeyE' && focused) {
-      focused.config?.action?.(focused.mesh, focused.config);
+      const actionTarget = focused.owner ?? focused.mesh;
+      focused.config?.action?.(actionTarget, focused.config, focused);
     }
   });
 
