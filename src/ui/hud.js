@@ -84,13 +84,13 @@ export function createHUD(gameState) {
     menuEl.classList.remove('hidden');
     menuEl.setAttribute('aria-hidden', 'false');
     menuButtonEl?.setAttribute('aria-expanded', 'true');
-    overlayMenuButtonEl?.setAttribute('aria-expanded', 'true');
+
     document.body.classList.add('menu-open');
     setMenuView(view);
     if (document.pointerLockElement) {
       document.exitPointerLock();
     }
-    pointerOverlayEl?.classList.add('hidden');
+
     reticleEl.style.display = 'none';
   };
 
@@ -99,12 +99,7 @@ export function createHUD(gameState) {
     menuEl.classList.add('hidden');
     menuEl.setAttribute('aria-hidden', 'true');
     menuButtonEl?.setAttribute('aria-expanded', 'false');
-    overlayMenuButtonEl?.setAttribute('aria-expanded', 'false');
-    document.body.classList.remove('menu-open');
-    activeMenuView = 'home';
-    if (!document.pointerLockElement) {
-      pointerOverlayEl?.classList.remove('hidden');
-    }
+
   };
 
   const syncAvatarOptions = (avatar) => {
