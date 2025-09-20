@@ -9,6 +9,7 @@ export function createHUD(gameState) {
   const promptEl = document.getElementById('interactionPrompt');
   const reticleEl = document.getElementById('reticle');
   const pointerOverlayEl = document.getElementById('pointerLockOverlay');
+  const overlayMenuButtonEl = document.getElementById('overlayMenuButton');
   const questToastEl = document.getElementById('questToast');
   const questToastTitleEl = document.getElementById('questToastTitle');
   const questToastBodyEl = document.getElementById('questToastBody');
@@ -83,11 +84,13 @@ export function createHUD(gameState) {
     menuEl.classList.remove('hidden');
     menuEl.setAttribute('aria-hidden', 'false');
     menuButtonEl?.setAttribute('aria-expanded', 'true');
+
     document.body.classList.add('menu-open');
     setMenuView(view);
     if (document.pointerLockElement) {
       document.exitPointerLock();
     }
+
     reticleEl.style.display = 'none';
   };
 
@@ -96,8 +99,7 @@ export function createHUD(gameState) {
     menuEl.classList.add('hidden');
     menuEl.setAttribute('aria-hidden', 'true');
     menuButtonEl?.setAttribute('aria-expanded', 'false');
-    document.body.classList.remove('menu-open');
-    activeMenuView = 'home';
+
   };
 
   const syncAvatarOptions = (avatar) => {
