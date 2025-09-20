@@ -30,6 +30,9 @@
           <div class="value" id="statusObjective">Explore Lifebot Town</div>
         </div>
       </div>
+      <button id="menuButton" class="hud-top-button" type="button" aria-haspopup="dialog" aria-expanded="false">
+        ⚙️ Settings
+      </button>
       <aside id="objectivePanel">
         <h2>Active Quest</h2>
         <ul id="objectiveList"></ul>
@@ -45,6 +48,16 @@
     <div id="reticle"></div>
     <div id="interactionPrompt"></div>
     <div id="pointerLockOverlay">
+      <button
+        id="overlayMenuButton"
+        class="hud-top-button overlay-settings-button"
+        type="button"
+        aria-haspopup="dialog"
+        aria-expanded="false"
+        data-prevent-lock
+      >
+        ⚙️ Settings
+      </button>
       <div class="pointer-card">
         <h1>Welcome to Lifebot Town</h1>
         <p>Click to lock the cursor. Use WASD to move, space to jump, and E to interact.</p>
@@ -56,6 +69,102 @@
       </div>
     </div>
     <div class="tooltip" id="tooltip"></div>
+    <div id="gameMenu" class="game-menu hidden" aria-hidden="true">
+      <div class="menu-backdrop" data-action="close"></div>
+      <div class="menu-window" role="dialog" aria-modal="true" aria-labelledby="menuTitle">
+        <header class="menu-header">
+          <h2 id="menuTitle">Lifebot Menu</h2>
+          <button type="button" class="menu-close" id="menuClose" aria-label="Close menu">×</button>
+        </header>
+        <div class="menu-body">
+          <section class="menu-view" data-view="home">
+            <p class="menu-intro">Take a short break or tweak how your adventure feels.</p>
+            <div class="menu-actions">
+              <button type="button" class="menu-action primary" data-action="resume">Resume the Game</button>
+              <button type="button" class="menu-action" data-action="open-settings">Settings</button>
+              <button type="button" class="menu-action danger" data-action="quit">Quit the Game</button>
+            </div>
+          </section>
+          <section class="menu-view hidden" data-view="settings">
+            <p class="menu-intro">Choose what to personalise.</p>
+            <div class="menu-actions">
+              <button type="button" class="menu-action" data-action="open-gameplay">Set My Gameplay</button>
+              <button type="button" class="menu-action" data-action="open-avatar">Avatar</button>
+            </div>
+            <button type="button" class="menu-link" data-action="back-home">← Back to menu</button>
+          </section>
+          <section class="menu-view hidden" data-view="avatar">
+            <h3>Avatar Style</h3>
+            <p class="menu-intro">Build the bot who represents you in Lifebot Town.</p>
+            <div class="option-group" data-setting="baseBody">
+              <h4>Base Body</h4>
+              <div class="option-grid">
+                <button type="button" class="option-chip" data-value="bot-girl">Girl Base Body</button>
+                <button type="button" class="option-chip" data-value="bot-boy">Boy Base Body</button>
+              </div>
+            </div>
+            <div class="option-group" data-setting="hairstyle">
+              <h4>Hairstyle</h4>
+              <div class="option-grid">
+                <button type="button" class="option-chip" data-value="twists">Twists</button>
+                <button type="button" class="option-chip" data-value="spiky">Spiky</button>
+                <button type="button" class="option-chip" data-value="pony">Ponytail</button>
+                <button type="button" class="option-chip" data-value="buzz">Buzz Cut</button>
+              </div>
+            </div>
+            <div class="option-group" data-setting="top">
+              <h4>Top</h4>
+              <div class="option-grid">
+                <button type="button" class="option-chip" data-value="sci-jacket">Science Jacket</button>
+                <button type="button" class="option-chip" data-value="retro-tee">Retro Tee</button>
+                <button type="button" class="option-chip" data-value="sporty">Sporty Hoodie</button>
+              </div>
+            </div>
+            <div class="option-group" data-setting="bottom">
+              <h4>Bottoms</h4>
+              <div class="option-grid">
+                <button type="button" class="option-chip" data-value="adventure">Adventure Trousers</button>
+                <button type="button" class="option-chip" data-value="shorts">Explorer Shorts</button>
+                <button type="button" class="option-chip" data-value="tech">Tech Leggings</button>
+              </div>
+            </div>
+            <div class="option-group" data-setting="accessory">
+              <h4>Accessories</h4>
+              <div class="option-grid">
+                <button type="button" class="option-chip" data-value="headset">Holo Headset</button>
+                <button type="button" class="option-chip" data-value="sunglasses">Neon Sunglasses</button>
+                <button type="button" class="option-chip" data-value="adventure-hat">Explorer Hat</button>
+                <button type="button" class="option-chip" data-value="none">No Extra Gear</button>
+              </div>
+            </div>
+            <div class="avatar-preview" id="avatarPreview"></div>
+            <button type="button" class="menu-link" data-action="back-settings">← Back to settings</button>
+          </section>
+          <section class="menu-view hidden" data-view="gameplay">
+            <h3>Gameplay Feel</h3>
+            <p class="menu-intro">Tune how the world behaves around you.</p>
+            <div class="option-group">
+              <h4>Camera Perspective</h4>
+              <p class="hint">Try the third-person back view to see your bot in action.</p>
+              <div class="option-grid" id="viewModeButtons">
+                <button type="button" class="option-chip" data-view-mode="first-person">First Person</button>
+                <button type="button" class="option-chip" data-view-mode="third-person-back">Third Person Back</button>
+              </div>
+            </div>
+            <div class="option-group">
+              <h4>World Toggles</h4>
+              <label class="toggle" id="dinosaursToggle">
+                <input type="checkbox" id="dinosaursSwitch">
+                <span class="slider"></span>
+                <span class="label">Dinosaurs in my game</span>
+              </label>
+              <p class="hint">Flip the switch to welcome a whole pack of friendly dinos to Lifebot Town.</p>
+            </div>
+            <button type="button" class="menu-link" data-action="back-settings">← Back to settings</button>
+          </section>
+        </div>
+      </div>
+    </div>
   </div>
 </body>
 </html>

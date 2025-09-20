@@ -9,6 +9,8 @@ import { createQuestManager } from '../quests/questManager.js';
 import { createInteractionManager } from '../core/interaction.js';
 import { setupInput } from '../core/input.js';
 import { createLifeBotStadium } from '../../stadium.js';
+import { createDinosaurManager } from './dinosaurs.js';
+import { createPlayerAvatar } from './playerAvatar.js';
 
 function spawnTreasureChest(scene, materials, interactionManager, gameState, hud, position) {
   const chest = BABYLON.MeshBuilder.CreateBox('secretChest', { width: 1.6, height: 1.2, depth: 1.2 }, scene);
@@ -47,6 +49,30 @@ export function createGameWorld(engine, canvas, gameState, hud) {
   camera.maxZ = 2000;
   camera.attachControl(canvas);
 
+  const playerProxy = new BABYLON.TransformNode('playerProxy', scene);
+  playerProxy.position.copyFrom(camera.position);
+
+  const followCamera = new BABYLON.FollowCamera('thirdPersonCamera', camera.position.clone(), scene);
+  followCamera.lockedTarget = playerProxy;
+  followCamera.radius = 7.2;
+  followCamera.heightOffset = 2.6;
+  followCamera.rotationOffset = 180;
+  followCamera.cameraAcceleration = 0.08;
+  followCamera.maxCameraSpeed = 6.5;
+  followCamera.lowerRadiusLimit = 4.5;
+  followCamera.upperRadiusLimit = 9.5;
+  followCamera.detachControl();
+
+  const avatar = createPlayerAvatar(scene);
+  avatar.root.parent = playerProxy;
+  avatar.root.position = new BABYLON.Vector3(0, 0, 0);
+  avatar.setEnabled(false);
+
+  const forwardVec = new BABYLON.Vector3();
+  const proxyPos = new BABYLON.Vector3();
+  const playerForwardOffset = 0.9;
+  const playerVerticalOffset = (camera.ellipsoid?.y || 1.8) + (camera.ellipsoidOffset?.y || 0);
+
   const { shadowGenerator } = setupLighting(scene);
   const materials = createMaterials(scene);
 
@@ -58,6 +84,7 @@ export function createGameWorld(engine, canvas, gameState, hud) {
   const bridge = createHarborBridge(scene, materials, interactionManager, gameState, hud, terrain);
   const skyscraper = createSkyscraper(scene, materials, shadowGenerator, interactionManager, gameState, hud, terrain);
   const spyIsland = createSpyIsland(scene, materials, shadowGenerator, interactionManager, gameState, hud, camera);
+  const dinosaurManager = createDinosaurManager(scene, terrain);
 
   const stadiumRoot = createLifeBotStadium(scene, {
     parent: null,
@@ -76,6 +103,47 @@ export function createGameWorld(engine, canvas, gameState, hud) {
 
   const questManager = createQuestManager({ gameState, hud, interactionManager });
 
+  const setViewMode = (mode) => {
+    if (mode === 'third-person-back') {
+      if (scene.activeCamera !== followCamera) {
+        scene.activeCamera = followCamera;
+      }
+      avatar.setEnabled(true);
+    } else {
+      if (scene.activeCamera !== camera) {
+        scene.activeCamera = camera;
+      }
+      avatar.setEnabled(false);
+    }
+  };
+
+  const applyGameplaySettings = (settings) => {
+    setViewMode(settings.viewMode);
+    dinosaurManager.setEnabled(settings.dinosaursEnabled);
+  };
+
+  const applyAvatarSettings = (avatarSettings) => {
+    avatar.updateAppearance(avatarSettings);
+  };
+
+  const initialSettings = gameState.getSettings();
+  applyGameplaySettings(initialSettings.gameplay);
+  applyAvatarSettings(initialSettings.avatar);
+
+  gameState.addEventListener('settings-change', e => {
+    const { category, changes, settings } = e.detail;
+    if (category === 'gameplay') {
+      if (Object.prototype.hasOwnProperty.call(changes, 'viewMode')) {
+        setViewMode(settings.gameplay.viewMode);
+      }
+      if (Object.prototype.hasOwnProperty.call(changes, 'dinosaursEnabled')) {
+        dinosaurManager.setEnabled(settings.gameplay.dinosaursEnabled);
+      }
+    } else if (category === 'avatar') {
+      applyAvatarSettings(settings.avatar);
+    }
+  });
+
   gameState.addEventListener('secret-sequence', () => {
     if (scene.getMeshByName('secretChest')) return;
     const pos = camera.position.add(new BABYLON.Vector3(4, -1, 4));
@@ -88,6 +156,16 @@ export function createGameWorld(engine, canvas, gameState, hud) {
   });
 
   scene.onBeforeRenderObservable.add(() => {
+    const forward = camera.getForwardRay().direction;
+    forwardVec.copyFrom(forward).normalize();
+    const yaw = Math.atan2(forwardVec.x, forwardVec.z);
+    proxyPos.copyFrom(camera.position);
+    proxyPos.addInPlace(forwardVec.scale(playerForwardOffset));
+    proxyPos.y -= playerVerticalOffset;
+    playerProxy.position.copyFrom(proxyPos);
+    playerProxy.rotation.y = yaw;
+    followCamera.rotationOffset = 180 - BABYLON.Tools.ToDegrees(playerProxy.rotation.y);
+
     const { focused } = interactionManager;
     if (!focused) hud.hideTooltip();
   });
