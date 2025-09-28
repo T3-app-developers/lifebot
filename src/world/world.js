@@ -4,6 +4,7 @@ import { createTerrain } from './terrain.js';
 import { createTown } from './town.js';
 import { createSkyscraper } from './skyscraper.js';
 import { createSpyIsland } from './spyIsland.js';
+import { createIslaNublar } from './islaNublar.js';
 import { createHarborBridge } from './bridge.js';
 import { createQuestManager } from '../quests/questManager.js';
 import { createInteractionManager } from '../core/interaction.js';
@@ -86,6 +87,7 @@ export function createGameWorld(engine, canvas, gameState, hud) {
   const bridge = createHarborBridge(scene, materials, interactionManager, gameState, hud, terrain);
   const skyscraper = createSkyscraper(scene, materials, shadowGenerator, interactionManager, gameState, hud, terrain);
   const spyIsland = createSpyIsland(scene, materials, shadowGenerator, interactionManager, gameState, hud, camera);
+  const islaNublar = createIslaNublar(scene, materials, shadowGenerator, interactionManager, gameState, hud);
   const london = createCentralLondon(scene, materials, shadowGenerator, interactionManager, gameState, hud, terrain, camera);
   const resort = createFuturisticResort(scene, materials, shadowGenerator, interactionManager, gameState, hud, terrain);
   const dinosaurManager = createDinosaurManager(scene, terrain);
@@ -177,5 +179,5 @@ export function createGameWorld(engine, canvas, gameState, hud) {
   camera.position = new BABYLON.Vector3(-6, 4, -24);
   camera.setTarget(new BABYLON.Vector3(0, 2, 0));
 
-  return { scene, camera, interactionManager, materials, questManager, terrain, town, bridge, skyscraper, spyIsland, stadiumRoot, london, resort };
+
 }
