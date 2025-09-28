@@ -11,6 +11,7 @@ import { setupInput } from '../core/input.js';
 import { createLifeBotStadium } from '../../stadium.js';
 import { createDinosaurManager } from './dinosaurs.js';
 import { createPlayerAvatar } from './playerAvatar.js';
+import { createCentralLondon } from './london.js';
 
 function spawnTreasureChest(scene, materials, interactionManager, gameState, hud, position) {
   const chest = BABYLON.MeshBuilder.CreateBox('secretChest', { width: 1.6, height: 1.2, depth: 1.2 }, scene);
@@ -84,6 +85,7 @@ export function createGameWorld(engine, canvas, gameState, hud) {
   const bridge = createHarborBridge(scene, materials, interactionManager, gameState, hud, terrain);
   const skyscraper = createSkyscraper(scene, materials, shadowGenerator, interactionManager, gameState, hud, terrain);
   const spyIsland = createSpyIsland(scene, materials, shadowGenerator, interactionManager, gameState, hud, camera);
+  const london = createCentralLondon(scene, materials, shadowGenerator, interactionManager, gameState, hud, terrain, camera);
   const dinosaurManager = createDinosaurManager(scene, terrain);
 
   const stadiumRoot = createLifeBotStadium(scene, {
@@ -173,5 +175,5 @@ export function createGameWorld(engine, canvas, gameState, hud) {
   camera.position = new BABYLON.Vector3(-6, 4, -24);
   camera.setTarget(new BABYLON.Vector3(0, 2, 0));
 
-  return { scene, camera, interactionManager, materials, questManager, terrain, town, bridge, skyscraper, spyIsland, stadiumRoot };
+  return { scene, camera, interactionManager, materials, questManager, terrain, town, bridge, skyscraper, spyIsland, stadiumRoot, london };
 }
