@@ -22,42 +22,98 @@ function sculptTerrain(mesh) {
   mesh.refreshBoundingInfo();
 }
 
-function createTree(scene, materials, shadowGenerator) {
-  const trunk = BABYLON.MeshBuilder.CreateCylinder('treeTrunk', { height: 6, diameterTop: 0.8, diameterBottom: 1 }, scene);
-  const bark = new BABYLON.PBRMaterial('treeBark', scene);
-  bark.albedoColor = new BABYLON.Color3(0.36, 0.24, 0.18);
-  bark.roughness = 0.8;
-  bark.metallic = 0.0;
+function createTree(scene, materials) {
+  const treeRoot = new BABYLON.TransformNode('treeRoot', scene);
+
+  const bark = materials.wood.clone('treeBarkMat');
+  bark.albedoTexture = null;
+  bark.albedoColor = new BABYLON.Color3(0.34, 0.23, 0.17);
+  bark.roughness = 0.85;
+
+  const trunk = BABYLON.MeshBuilder.CreateCylinder('treeTrunk', {
+    height: 6.6,
+    diameterTop: 0.65,
+    diameterBottom: 1.1,
+    tessellation: 16
+  }, scene);
   trunk.material = bark;
+  trunk.parent = treeRoot;
 
-  const foliage = BABYLON.MeshBuilder.CreateSphere('treeTop', { diameter: 8, segments: 8 }, scene);
-  foliage.position.y = 5;
-  const leafMat = new BABYLON.StandardMaterial('leafMat', scene);
-  leafMat.diffuseColor = new BABYLON.Color3(0.14, 0.48, 0.24);
-  leafMat.specularColor = new BABYLON.Color3(0.1, 0.1, 0.1);
-  foliage.material = leafMat;
+  const roots = BABYLON.MeshBuilder.CreateCylinder('treeRoots', { height: 0.4, diameterTop: 1.4, diameterBottom: 1.8, tessellation: 16 }, scene);
+  roots.position.y = 0.2;
+  roots.material = bark;
+  roots.parent = treeRoot;
 
-  const tree = BABYLON.Mesh.MergeMeshes([trunk, foliage], true, true, undefined, false, true);
-  tree.receiveShadows = true;
-  tree.checkCollisions = false;
-  if (shadowGenerator) shadowGenerator.addShadowCaster(tree);
-  return tree;
+  const leafMaterial = new BABYLON.PBRMaterial('treeLeafMat', scene);
+  leafMaterial.albedoColor = new BABYLON.Color3(0.18, 0.42, 0.21);
+  leafMaterial.roughness = 0.6;
+  leafMaterial.metallic = 0;
+  leafMaterial.subSurface.isTranslucencyEnabled = true;
+  leafMaterial.subSurface.translucencyIntensity = 0.8;
+  leafMaterial.subSurface.minimumThickness = 0.2;
+  leafMaterial.subSurface.maximumThickness = 1.2;
+
+  const canopyBlueprint = [
+    { y: 4.4, radius: 3.4, scaleY: 0.75 },
+    { y: 6.2, radius: 2.7, scaleY: 0.7 },
+    { y: 7.4, radius: 1.9, scaleY: 0.65 }
+  ];
+
+  canopyBlueprint.forEach((layer, index) => {
+    const canopy = BABYLON.MeshBuilder.CreateIcoSphere(`treeCanopy_${index}`, { radius: layer.radius, subdivisions: 2 }, scene);
+    canopy.parent = treeRoot;
+    canopy.position.y = layer.y;
+    canopy.scaling.y = layer.scaleY;
+    canopy.material = leafMaterial;
+  });
+
+  treeRoot.getChildMeshes().forEach((mesh) => {
+    mesh.receiveShadows = true;
+    mesh.checkCollisions = false;
+  });
+
+  return treeRoot;
 }
 
 function scatterTrees(scene, materials, shadowGenerator, ground) {
-  const treePrototype = createTree(scene, materials, shadowGenerator);
+  const treePrototype = createTree(scene, materials);
   treePrototype.setEnabled(false);
   const instances = [];
   const rng = () => Math.random() * 2 - 1;
   for (let i = 0; i < 45; i++) {
-    const clone = treePrototype.clone(`tree_${i}`);
+    const clone = treePrototype.clone(`tree_${i}`, null);
     const x = rng() * 180;
     const z = rng() * 180;
-    if (Math.abs(x) < 30 && Math.abs(z) < 30) { clone.dispose(); continue; }
+    if (Math.abs(x) < 30 && Math.abs(z) < 30) {
+      clone.dispose();
+      continue;
+    }
     const height = ground.getHeightAtCoordinates(x, z) || 0;
-    clone.position.set(x, height + 3, z);
+    clone.position.set(x, height, z);
     clone.rotation.y = Math.random() * Math.PI * 2;
-    clone.scaling.scaleInPlace(0.8 + Math.random() * 0.6);
+    const scale = 0.9 + Math.random() * 0.7;
+    clone.scaling = new BABYLON.Vector3(scale, 0.95 + Math.random() * 0.4, scale);
+
+    const canopyMeshes = clone.getChildMeshes(false).filter(mesh => mesh.name.startsWith('treeCanopy_'));
+    if (canopyMeshes.length > 0) {
+      const baseLeafMaterial = canopyMeshes[0].material;
+      if (baseLeafMaterial) {
+        const leafClone = baseLeafMaterial.clone(`${clone.name}_leafMat`);
+        const tintOffset = (Math.random() - 0.5) * 0.08;
+        leafClone.albedoColor = leafClone.albedoColor.add(new BABYLON.Color3(tintOffset * 0.4, tintOffset, tintOffset * 0.3));
+        canopyMeshes.forEach(mesh => {
+          mesh.material = leafClone;
+        });
+      }
+    }
+
+    clone.getChildMeshes().forEach((mesh) => {
+      mesh.receiveShadows = true;
+      if (shadowGenerator) {
+        shadowGenerator.addShadowCaster(mesh);
+      }
+    });
+
     clone.setEnabled(true);
     instances.push(clone);
   }
@@ -65,25 +121,50 @@ function scatterTrees(scene, materials, shadowGenerator, ground) {
 }
 
 function createLamppost(scene, materials) {
-  const pole = BABYLON.MeshBuilder.CreateCylinder('lampPole', { height: 6, diameter: 0.25 }, scene);
+  const pole = BABYLON.MeshBuilder.CreateCylinder('lampPole', { height: 6.4, diameter: 0.22, tessellation: 20 }, scene);
   pole.material = materials.metal;
-  const head = BABYLON.MeshBuilder.CreateBox('lampHead', { size: 0.8 }, scene);
-  head.position.y = 3;
-  head.material = materials.metal;
+  pole.isPickable = false;
+  pole.checkCollisions = false;
+
+  const base = BABYLON.MeshBuilder.CreateCylinder('lampBase', { height: 0.4, diameterTop: 0.5, diameterBottom: 0.7 }, scene);
+  base.parent = pole;
+  base.position.y = -3;
+  base.material = materials.metal;
+  base.isPickable = false;
+
+  const head = BABYLON.MeshBuilder.CreateBox('lampHead', { width: 0.9, height: 0.5, depth: 0.9 }, scene);
+  head.position.y = 2.9;
   head.parent = pole;
-  const bulb = BABYLON.MeshBuilder.CreateSphere('lampBulb', { diameter: 0.6 }, scene);
-  bulb.position.y = 3;
-  bulb.material = materials.emissive;
+  head.material = materials.metal;
+  head.isPickable = false;
+
+  const glass = materials.glass.clone('lampGlass');
+  glass.alpha = 0.55;
+  const bulb = BABYLON.MeshBuilder.CreateSphere('lampBulb', { diameter: 0.55, segments: 16 }, scene);
+  bulb.position.y = 2.9;
   bulb.parent = pole;
-  const light = new BABYLON.PointLight('lampLight', new BABYLON.Vector3(0, 3.2, 0), scene);
-  light.diffuse = new BABYLON.Color3(0.8, 0.9, 1);
-  light.intensity = 0.6;
+  bulb.material = glass;
+  bulb.isPickable = false;
+
+  const glowDisc = BABYLON.MeshBuilder.CreateDisc('lampGlow', { radius: 1.1, tessellation: 24 }, scene);
+  glowDisc.rotation.x = Math.PI / 2;
+  glowDisc.position.y = 2.65;
+  glowDisc.material = materials.emissive;
+  glowDisc.parent = pole;
+  glowDisc.isPickable = false;
+
+  const light = new BABYLON.SpotLight('lampLight', new BABYLON.Vector3(0, 3.2, 0), new BABYLON.Vector3(0, -1, 0), Math.PI / 3.2, 12, scene);
+  light.diffuse = new BABYLON.Color3(0.95, 0.98, 1);
+  light.specular = new BABYLON.Color3(0.8, 0.85, 0.95);
+  light.intensity = 0.75;
+  light.range = 22;
   light.parent = pole;
+
   return pole;
 }
 
 export function createTerrain(scene, materials, shadowGenerator) {
-  const ground = BABYLON.MeshBuilder.CreateGround('mainGround', { width: 260, height: 260, subdivisions: 120 }, scene);
+  const ground = BABYLON.MeshBuilder.CreateGround('mainGround', { width: 260, height: 260, subdivisions: 160 }, scene);
   ground.material = materials.ground;
   ground.receiveShadows = true;
   ground.checkCollisions = true;
@@ -94,12 +175,12 @@ export function createTerrain(scene, materials, shadowGenerator) {
   water.position.y = -1.8;
   const waterMaterial = new BABYLON.WaterMaterial('waterMaterial', scene);
   waterMaterial.bumpTexture = new BABYLON.Texture('https://assets.babylonjs.com/textures/waterbump.png', scene);
-  waterMaterial.windForce = -8;
-  waterMaterial.waveHeight = 0.45;
-  waterMaterial.bumpHeight = 0.08;
-  waterMaterial.waveLength = 0.2;
-  waterMaterial.colorBlendFactor = 0.4;
-  waterMaterial.waterColor = new BABYLON.Color3(0.1, 0.35, 0.6);
+  waterMaterial.windForce = -10;
+  waterMaterial.waveHeight = 0.36;
+  waterMaterial.bumpHeight = 0.06;
+  waterMaterial.waveLength = 0.18;
+  waterMaterial.colorBlendFactor = 0.35;
+  waterMaterial.waterColor = new BABYLON.Color3(0.08, 0.32, 0.54);
   waterMaterial.addToRenderList(ground);
   water.material = waterMaterial;
   water.isPickable = false;
@@ -135,22 +216,97 @@ export function createTerrain(scene, materials, shadowGenerator) {
 
   const trees = scatterTrees(scene, materials, shadowGenerator, ground);
 
-  const farmland = BABYLON.MeshBuilder.CreateGround('farmland', { width: 18, height: 24, subdivisions: 4 }, scene);
-  farmland.material = materials.wood.clone('farmlandMat');
-  farmland.material.albedoColor = new BABYLON.Color3(0.32, 0.22, 0.18);
+  const farmland = BABYLON.MeshBuilder.CreateGround('farmland', { width: 18, height: 24, subdivisionsX: 24, subdivisionsY: 32 }, scene);
   const farmPos = new BABYLON.Vector3(36, ground.getHeightAtCoordinates(36, 28) + 0.02, 28);
   farmland.position.copyFrom(farmPos);
+  farmland.rotation.y = Math.PI / 18;
+  const farmPositions = farmland.getVerticesData(BABYLON.VertexBuffer.PositionKind);
+  for (let i = 0; i < farmPositions.length; i += 3) {
+    const x = farmPositions[i];
+    const z = farmPositions[i + 2];
+    const rowWave = Math.sin(z * 1.1) * 0.18;
+    const subtleNoise = Math.sin(x * 1.4 + z * 0.5) * 0.05;
+    farmPositions[i + 1] = rowWave + subtleNoise;
+  }
+  farmland.updateVerticesData(BABYLON.VertexBuffer.PositionKind, farmPositions, true, false);
+
+  const soilMaterial = materials.ground.clone('farmlandSoilMat');
+  soilMaterial.albedoTexture = null;
+  soilMaterial.bumpTexture = null;
+  soilMaterial.albedoColor = new BABYLON.Color3(0.22, 0.15, 0.1);
+  soilMaterial.roughness = 0.95;
+  soilMaterial.metallic = 0;
+  farmland.material = soilMaterial;
   farmland.receiveShadows = true;
 
   const cropRows = [];
-  for (let i = 0; i < 4; i++) {
-    const row = BABYLON.MeshBuilder.CreateBox(`cropRow_${i}`, { width: 16, depth: 1.6, height: 0.3 }, scene);
-    row.material = materials.wood.clone(`cropRowMat_${i}`);
-    row.material.albedoColor = new BABYLON.Color3(0.1, 0.4 + 0.1 * Math.random(), 0.2);
-    row.position = farmPos.add(new BABYLON.Vector3(0, 0.7, -8 + i * 4));
-    row.receiveShadows = true;
-    cropRows.push(row);
+  const sproutMaterial = new BABYLON.PBRMaterial('sproutStemMat', scene);
+  sproutMaterial.albedoColor = new BABYLON.Color3(0.08, 0.32, 0.18);
+  sproutMaterial.roughness = 0.5;
+  sproutMaterial.metallic = 0;
+
+  const leafMaterial = new BABYLON.PBRMaterial('sproutLeafMat', scene);
+  leafMaterial.albedoColor = new BABYLON.Color3(0.15, 0.55, 0.26);
+  leafMaterial.roughness = 0.4;
+  leafMaterial.subSurface.isTranslucencyEnabled = true;
+  leafMaterial.subSurface.translucencyIntensity = 0.7;
+
+  const createSprout = (name) => {
+    const root = new BABYLON.TransformNode(name, scene);
+    const stem = BABYLON.MeshBuilder.CreateCylinder(`${name}_stem`, { height: 0.9, diameter: 0.12, tessellation: 6 }, scene);
+    stem.material = sproutMaterial;
+    stem.parent = root;
+    stem.position.y = 0.45;
+
+    const leaf = BABYLON.MeshBuilder.CreateDisc(`${name}_leaf`, { radius: 0.35, tessellation: 12 }, scene);
+    leaf.parent = stem;
+    leaf.material = leafMaterial;
+    leaf.rotation.x = Math.PI / 2;
+    leaf.position.y = 0.45;
+    leaf.position.z = 0.15;
+    leaf.billboardMode = BABYLON.AbstractMesh.BILLBOARDMODE_Y;
+
+    const leaf2 = leaf.clone(`${name}_leafB`);
+    leaf2.rotation.y = Math.PI / 2.5;
+    leaf2.position.z = -0.15;
+
+    return root;
+  };
+
+  const sproutPrototype = createSprout('sprout');
+  sproutPrototype.setEnabled(false);
+
+  const rows = 4;
+  const columns = 8;
+  const spacingX = 1.9;
+  const spacingZ = 2.6;
+  const farmlandRotation = BABYLON.Quaternion.FromEulerAngles(0, farmland.rotation.y, 0);
+  for (let rowIndex = 0; rowIndex < rows; rowIndex++) {
+    for (let columnIndex = 0; columnIndex < columns; columnIndex++) {
+      const sprout = sproutPrototype.clone(`sprout_${rowIndex}_${columnIndex}`);
+      const offsetLocal = new BABYLON.Vector3(
+        (columnIndex - (columns - 1) / 2) * spacingX,
+        0,
+        (rowIndex - (rows - 1) / 2) * spacingZ
+      );
+      const offsetWorld = offsetLocal.clone();
+      offsetWorld.rotateByQuaternionToRef(farmlandRotation, offsetWorld);
+      const worldX = farmland.position.x + offsetWorld.x;
+      const worldZ = farmland.position.z + offsetWorld.z;
+      const surfaceHeight = farmland.getHeightAtCoordinates(worldX, worldZ) ?? farmland.position.y;
+      sprout.position = new BABYLON.Vector3(worldX, surfaceHeight + 0.45, worldZ);
+      sprout.rotation.y = Math.random() * Math.PI;
+      const randomScale = 0.9 + Math.random() * 0.2;
+      sprout.scaling = new BABYLON.Vector3(randomScale, 0.85 + Math.random() * 0.25, randomScale);
+      sprout.setEnabled(true);
+      sprout.getChildMeshes().forEach(mesh => {
+        mesh.receiveShadows = true;
+      });
+      cropRows.push(sprout);
+    }
   }
+
+  sproutPrototype.dispose();
 
   return { ground, water, waterMaterial, plaza, pier, lampposts, trees, farmland, cropRows };
 }

@@ -9,54 +9,59 @@ export function createMaterials(scene) {
     metal: 'https://assets.babylonjs.com/textures/metalPanel.jpg',
     wood: 'https://assets.babylonjs.com/textures/wood.jpg',
     woodNormal: 'https://assets.babylonjs.com/textures/woodNormal.jpg',
-    waterBump: 'https://assets.babylonjs.com/textures/waterbump.png',
     neon: 'https://assets.babylonjs.com/textures/glow.png'
   };
 
   const createTexture = (url) => {
     const tex = new BABYLON.Texture(url, scene);
-    tex.wrapU = BABYLON.Constants.TEXTURE_CLAMP_ADDRESSMODE;
-    tex.wrapV = BABYLON.Constants.TEXTURE_CLAMP_ADDRESSMODE;
+    tex.wrapU = BABYLON.Constants.TEXTURE_WRAP_ADDRESSMODE;
+    tex.wrapV = BABYLON.Constants.TEXTURE_WRAP_ADDRESSMODE;
+    tex.anisotropicFilteringLevel = 8;
     return tex;
   };
 
   const ground = new BABYLON.PBRMaterial('groundMat', scene);
   ground.albedoTexture = createTexture(textures.ground);
   ground.bumpTexture = createTexture(textures.groundNormal);
-  ground.albedoTexture.uScale = ground.albedoTexture.vScale = 8;
-  ground.bumpTexture.uScale = ground.bumpTexture.vScale = 8;
+  ground.albedoTexture.uScale = ground.albedoTexture.vScale = 12;
+  ground.bumpTexture.uScale = ground.bumpTexture.vScale = 12;
   ground.metallic = 0.0;
-  ground.roughness = 0.9;
+  ground.roughness = 0.92;
+  ground.subSurface.isTranslucencyEnabled = true;
+  ground.subSurface.translucencyIntensity = 0.6;
 
   const plaza = new BABYLON.PBRMaterial('plazaMat', scene);
   plaza.albedoTexture = createTexture(textures.plaza);
   plaza.bumpTexture = createTexture(textures.plazaNormal);
-  plaza.albedoTexture.uScale = plaza.albedoTexture.vScale = 4;
-  plaza.bumpTexture.uScale = plaza.bumpTexture.vScale = 4;
+  plaza.albedoTexture.uScale = plaza.albedoTexture.vScale = 6;
+  plaza.bumpTexture.uScale = plaza.bumpTexture.vScale = 6;
   plaza.metallic = 0.1;
-  plaza.roughness = 0.6;
+  plaza.roughness = 0.55;
+  plaza.reflectivityColor = new BABYLON.Color3(0.3, 0.35, 0.4);
 
   const brick = new BABYLON.PBRMaterial('brickMat', scene);
   brick.albedoTexture = createTexture(textures.brick);
   brick.bumpTexture = createTexture(textures.brickNormal);
-  brick.albedoTexture.uScale = brick.albedoTexture.vScale = 2;
-  brick.bumpTexture.uScale = brick.bumpTexture.vScale = 2;
-  brick.metallic = 0.2;
-  brick.roughness = 0.55;
+  brick.albedoTexture.uScale = brick.albedoTexture.vScale = 3;
+  brick.bumpTexture.uScale = brick.bumpTexture.vScale = 3;
+  brick.metallic = 0.18;
+  brick.roughness = 0.48;
+  brick.useAmbientOcclusionFromMetallicTextureRed = true;
 
   const metal = new BABYLON.PBRMaterial('metalMat', scene);
   metal.albedoTexture = createTexture(textures.metal);
-  metal.albedoTexture.uScale = metal.albedoTexture.vScale = 2;
-  metal.metallic = 0.8;
-  metal.roughness = 0.3;
+  metal.albedoTexture.uScale = metal.albedoTexture.vScale = 3;
+  metal.metallic = 0.85;
+  metal.roughness = 0.25;
+  metal.reflectionColor = new BABYLON.Color3(0.8, 0.85, 0.9);
 
   const wood = new BABYLON.PBRMaterial('woodMat', scene);
   wood.albedoTexture = createTexture(textures.wood);
   wood.bumpTexture = createTexture(textures.woodNormal);
-  wood.albedoTexture.uScale = wood.albedoTexture.vScale = 1.4;
-  wood.bumpTexture.uScale = wood.bumpTexture.vScale = 1.4;
-  wood.metallic = 0.05;
-  wood.roughness = 0.55;
+  wood.albedoTexture.uScale = wood.albedoTexture.vScale = 2.5;
+  wood.bumpTexture.uScale = wood.bumpTexture.vScale = 2.5;
+  wood.metallic = 0.04;
+  wood.roughness = 0.6;
 
   const neon = new BABYLON.StandardMaterial('neonMat', scene);
   neon.emissiveTexture = createTexture(textures.neon);
@@ -74,8 +79,8 @@ export function createMaterials(scene) {
   glass.subSurface.refractionIntensity = 0.8;
 
   const emissive = new BABYLON.StandardMaterial('emissiveMat', scene);
-  emissive.emissiveColor = new BABYLON.Color3(0.9, 0.6, 1);
-  emissive.alpha = 0.9;
+  emissive.emissiveColor = new BABYLON.Color3(0.9, 0.7, 1);
+  emissive.alpha = 0.92;
 
   const doorHighlight = new BABYLON.PBRMaterial('doorHighlightMat', scene);
   doorHighlight.albedoColor = new BABYLON.Color3(0.55, 0.7, 0.95);
