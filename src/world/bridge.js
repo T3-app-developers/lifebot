@@ -72,6 +72,7 @@ export function createHarborBridge(scene, materials, interactionManager, gameSta
     });
     hud.pushNotification('Harbor bridge unfurls across the bay.', 'success', 3200);
     gameState.emit('bridge-deployed', { endPosition });
+    gameState.setFlag('harbor-bridge-online', true);
   };
 
   interactionManager.register(controlPanel, {

@@ -494,6 +494,7 @@ export function createTown(scene, materials, shadowGenerator, interactionManager
         type: 'quest',
         description: 'Collected from the residential purifier.'
       });
+      gameState.setFlag('town-water-collected', true);
       const sceneAnim = scene.beginAnimation(houses[0].water, 0, 30, false);
       hud.pushNotification('Water gushes into your bottle.', 'info', 2400);
       return sceneAnim;
@@ -540,7 +541,10 @@ export function createTown(scene, materials, shadowGenerator, interactionManager
   interactionManager.register(jobBoard, {
     prompt: 'Press E to view available jobs',
     tooltip: '<strong>Town Jobs</strong><br/>Daily contracts to earn coins and reputation.',
-    action: () => gameState.emit('job-board', {})
+    action: () => {
+      gameState.setFlag('job-briefed', true);
+      gameState.emit('job-board', {});
+    }
   });
 
   const harvestCooldowns = new WeakMap();
@@ -567,6 +571,7 @@ export function createTown(scene, materials, shadowGenerator, interactionManager
           });
           gameState.addCoins(4, 'Harvest contract');
           hud.pushNotification('Harvested fresh glow berries!', 'success', 2600);
+          gameState.setFlag('farm-harvested', true);
         }
       });
     });

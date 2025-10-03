@@ -14,6 +14,7 @@ import { createDinosaurManager } from './dinosaurs.js';
 import { createPlayerAvatar } from './playerAvatar.js';
 import { createCentralLondon } from './london.js';
 import { createFuturisticResort } from './resort.js';
+import { createGuidanceSystem } from './guidance.js';
 
 function spawnTreasureChest(scene, materials, interactionManager, gameState, hud, position) {
   const chest = BABYLON.MeshBuilder.CreateBox('secretChest', { width: 1.6, height: 1.2, depth: 1.2 }, scene);
@@ -92,6 +93,10 @@ export function createGameWorld(engine, canvas, gameState, hud) {
   const resort = createFuturisticResort(scene, materials, shadowGenerator, interactionManager, gameState, hud, terrain);
   const dinosaurManager = createDinosaurManager(scene, terrain);
 
+  const guidance = createGuidanceSystem(scene, materials, interactionManager, gameState, hud, {
+    ground: terrain.ground
+  });
+
   const stadiumRoot = createLifeBotStadium(scene, {
     parent: null,
     npcFillRatio: 0.14,
@@ -103,6 +108,7 @@ export function createGameWorld(engine, canvas, gameState, hud) {
       }
       gameState.addCoins(1, 'Fan participation');
       gameState.emit('stadium-cheer', {});
+      gameState.setFlag('stadium-fan', true);
     }
   });
   stadiumRoot.root.position = new BABYLON.Vector3(-70, terrain.ground.getHeightAtCoordinates(-70, 80) + 0.1, 80);
@@ -187,6 +193,7 @@ export function createGameWorld(engine, canvas, gameState, hud) {
     avatar,
     interactionManager,
     questManager,
-    dinosaurManager
+    dinosaurManager,
+    guidance
   };
 }
