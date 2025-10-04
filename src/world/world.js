@@ -93,6 +93,7 @@ export function createGameWorld(engine, canvas, gameState, hud) {
   const london = createCentralLondon(scene, materials, shadowGenerator, interactionManager, gameState, hud, terrain, camera);
   const resort = createFuturisticResort(scene, materials, shadowGenerator, interactionManager, gameState, hud, terrain);
   const dinosaurManager = createDinosaurManager(scene, terrain);
+  const inputState = setupInput(scene, camera, gameState, hud);
 
   const setInitialSpawn = () => {
     const spawnPosition = new BABYLON.Vector3(0, 0, -8);
