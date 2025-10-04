@@ -37,15 +37,13 @@ On first launch the canvas displays a full-screen onboarding card. Clicking lock
 ## Technical notes
 
 - Scene logic is split into ES modules under `src/` for maintainability.
-- Materials lean on PBR textures from the Babylon.js CDN, backed by global tone mapping, fog and a directional sun rig.
+- Materials now rely on lightweight procedural textures generated at runtime, backed by global tone mapping, fog and a directional sun rig.
 - Interactions use a highlight/reticle system plus a custom interaction manager for consistent prompts.
 - Quests are orchestrated via an `EventTarget`-based game state, keeping UI and progression decoupled.
 - The cruise-ship web component (`cruise_ship.html`, `cruise-ship-item.js`) retains its own demo entry point but now mirrors the global UI language.
 
 ## Asset & audio credits
 
-- Babylon.js default environment (`environment.env`) and texture set via CDN.
 - Crowd ambience from [Pixabay / RedOctopus](https://pixabay.com/sound-effects/stadium-ambience-1-126380/).
-- Particle flare sprite from `https://assets.babylonjs.com/particles/flare.png`.
 
 Enjoy exploring, and feel free to adapt the quests and encounters for your own releases.
