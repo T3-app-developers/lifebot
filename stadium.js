@@ -2,6 +2,22 @@
 // Babylon.js utility
 // Creates a compact multi-sport stadium with seating and interactive seats.
 
+function createParticleTexture(scene, name = 'lifebotParticleTexture') {
+  const size = 128;
+  const texture = new BABYLON.DynamicTexture(name, { width: size, height: size }, scene, false);
+  const ctx = texture.getContext();
+  const center = size / 2;
+  const gradient = ctx.createRadialGradient(center, center, 0, center, center, center);
+  gradient.addColorStop(0, 'rgba(255, 255, 255, 1)');
+  gradient.addColorStop(0.4, 'rgba(255, 255, 255, 0.8)');
+  gradient.addColorStop(1, 'rgba(255, 255, 255, 0)');
+  ctx.fillStyle = gradient;
+  ctx.fillRect(0, 0, size, size);
+  texture.update(false);
+  texture.hasAlpha = true;
+  return texture;
+}
+
 export function createLifeBotStadium(scene, opts) {
   opts = opts || {};
   var infieldRadius = opts.infieldRadius || 40;
@@ -295,7 +311,7 @@ export function createLifeBotStadium(scene, opts) {
   scoreboardLight.intensity = 1.2;
 
   var cheerParticles = new BABYLON.ParticleSystem("stadiumCheer", 2000, scene);
-  cheerParticles.particleTexture = new BABYLON.Texture('https://assets.babylonjs.com/particles/flare.png', scene);
+  cheerParticles.particleTexture = createParticleTexture(scene, 'stadiumCheerParticle');
   cheerParticles.emitter = new BABYLON.Vector3(0, wallHeight + 4, 0);
   cheerParticles.minEmitBox = new BABYLON.Vector3(-10, 0, -10);
   cheerParticles.maxEmitBox = new BABYLON.Vector3(10, 0, 10);

@@ -635,7 +635,17 @@ function createFlameBot(scene, materials, shadowGenerator, position) {
   nozzle.parent = root;
 
   const flame = new BABYLON.ParticleSystem('flameBotFire', 800, scene);
-  flame.particleTexture = new BABYLON.Texture('https://assets.babylonjs.com/particles/flare.png', scene);
+  const flameTexture = new BABYLON.DynamicTexture('flameBotParticleTex', { width: 128, height: 128 }, scene, false);
+  const flameCtx = flameTexture.getContext();
+  const flameGradient = flameCtx.createRadialGradient(64, 64, 0, 64, 64, 64);
+  flameGradient.addColorStop(0, 'rgba(255, 255, 255, 1)');
+  flameGradient.addColorStop(0.4, 'rgba(255, 200, 80, 0.8)');
+  flameGradient.addColorStop(1, 'rgba(255, 100, 20, 0)');
+  flameCtx.fillStyle = flameGradient;
+  flameCtx.fillRect(0, 0, 128, 128);
+  flameTexture.update(false);
+  flameTexture.hasAlpha = true;
+  flame.particleTexture = flameTexture;
   flame.emitter = nozzle;
   flame.minEmitBox = new BABYLON.Vector3(0, 0, 0);
   flame.maxEmitBox = new BABYLON.Vector3(0, 0, 0.1);
