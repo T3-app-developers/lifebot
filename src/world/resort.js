@@ -377,13 +377,6 @@ export function createFuturisticResort(scene, materials, shadowGenerator, intera
     palm.parent = root;
   });
 
-  const ambientSound = new BABYLON.Sound('resortAmbience', 'https://assets.babylonjs.com/sounds/ambienceBirds.wav', scene, null, {
-    autoplay: true,
-    loop: true,
-    volume: 0.35
-  });
-  ambientSound.attachToMesh(root);
-
   const spotlight = new BABYLON.SpotLight('resortSpotlight', new BABYLON.Vector3(0, 40, -10), new BABYLON.Vector3(0, -1, 0.2), Math.PI / 2.6, 10, scene);
   spotlight.intensity = 0.8;
   spotlight.diffuse = new BABYLON.Color3(0.9, 0.95, 1);

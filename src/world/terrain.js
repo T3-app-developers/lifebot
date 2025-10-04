@@ -174,7 +174,22 @@ export function createTerrain(scene, materials, shadowGenerator) {
   const water = BABYLON.MeshBuilder.CreateGround('waterPlane', { width: 600, height: 600, subdivisions: 16 }, scene);
   water.position.y = -1.8;
   const waterMaterial = new BABYLON.WaterMaterial('waterMaterial', scene);
-  waterMaterial.bumpTexture = new BABYLON.Texture('https://assets.babylonjs.com/textures/waterbump.png', scene);
+  const waterBump = new BABYLON.DynamicTexture('waterBumpTexture', { width: 256, height: 256 }, scene, false);
+  const waterCtx = waterBump.getContext();
+  for (let y = 0; y < 256; y++) {
+    for (let x = 0; x < 256; x++) {
+      const nx = x / 256;
+      const ny = y / 256;
+      const value = 0.5 + 0.5 * Math.sin(nx * Math.PI * 8 + Math.sin(ny * Math.PI * 4));
+      const shade = Math.floor(value * 255);
+      waterCtx.fillStyle = `rgb(${shade}, ${shade}, ${shade})`;
+      waterCtx.fillRect(x, y, 1, 1);
+    }
+  }
+  waterBump.update(false);
+  waterBump.wrapU = BABYLON.Texture.WRAP_ADDRESSMODE;
+  waterBump.wrapV = BABYLON.Texture.WRAP_ADDRESSMODE;
+  waterMaterial.bumpTexture = waterBump;
   waterMaterial.windForce = -10;
   waterMaterial.waveHeight = 0.36;
   waterMaterial.bumpHeight = 0.06;

@@ -75,13 +75,14 @@ export function createGameWorld(engine, canvas, gameState, hud) {
   const forwardVec = new BABYLON.Vector3();
   const proxyPos = new BABYLON.Vector3();
   const playerForwardOffset = 0.9;
-  const playerVerticalOffset = (camera.ellipsoid?.y || 1.8) + (camera.ellipsoidOffset?.y || 0);
+  let playerVerticalOffset = (camera.ellipsoid?.y || 1.8) + (camera.ellipsoidOffset?.y || 0);
 
   const { shadowGenerator } = setupLighting(scene);
   const materials = createMaterials(scene);
 
   const interactionManager = createInteractionManager(scene, camera, hud);
   setupInput(scene, camera, gameState, hud);
+  playerVerticalOffset = (camera.ellipsoid?.y || 1.8) + (camera.ellipsoidOffset?.y || 0);
 
   const terrain = createTerrain(scene, materials, shadowGenerator);
   const town = createTown(scene, materials, shadowGenerator, interactionManager, gameState, hud, terrain);
@@ -92,6 +93,22 @@ export function createGameWorld(engine, canvas, gameState, hud) {
   const london = createCentralLondon(scene, materials, shadowGenerator, interactionManager, gameState, hud, terrain, camera);
   const resort = createFuturisticResort(scene, materials, shadowGenerator, interactionManager, gameState, hud, terrain);
   const dinosaurManager = createDinosaurManager(scene, terrain);
+
+  const setInitialSpawn = () => {
+    const spawnPosition = new BABYLON.Vector3(0, 0, -8);
+    const groundHeight = terrain.ground?.getHeightAtCoordinates(spawnPosition.x, spawnPosition.z) || 0;
+    spawnPosition.y = groundHeight + playerVerticalOffset;
+    camera.position.copyFrom(spawnPosition);
+    const lookTarget = new BABYLON.Vector3(0, groundHeight + 1.6, -13);
+    camera.setTarget(lookTarget);
+    playerProxy.position.copyFrom(spawnPosition);
+    playerProxy.position.y -= playerVerticalOffset;
+    const forward = camera.getForwardRay().direction;
+    playerProxy.rotation.y = Math.atan2(forward.x, forward.z);
+    followCamera.position = spawnPosition.add(new BABYLON.Vector3(0, followCamera.heightOffset, followCamera.radius));
+  };
+
+  setInitialSpawn();
 
   const guidance = createGuidanceSystem(scene, materials, interactionManager, gameState, hud, {
     ground: terrain.ground
