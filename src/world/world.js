@@ -16,6 +16,8 @@ import { createCentralLondon } from './london.js';
 import { createFuturisticResort } from './resort.js';
 import { createGuidanceSystem } from './guidance.js';
 
+const MOVEMENT_KEYS = new Set(['KeyW', 'KeyA', 'KeyS', 'KeyD']);
+
 function spawnTreasureChest(scene, materials, interactionManager, gameState, hud, position) {
   const chest = BABYLON.MeshBuilder.CreateBox('secretChest', { width: 1.6, height: 1.2, depth: 1.2 }, scene);
   chest.position.copyFrom(position);
@@ -81,8 +83,6 @@ export function createGameWorld(engine, canvas, gameState, hud) {
   const materials = createMaterials(scene);
 
   const interactionManager = createInteractionManager(scene, camera, hud);
-  setupInput(scene, camera, gameState, hud);
-  playerVerticalOffset = (camera.ellipsoid?.y || 1.8) + (camera.ellipsoidOffset?.y || 0);
 
   const terrain = createTerrain(scene, materials, shadowGenerator);
   const town = createTown(scene, materials, shadowGenerator, interactionManager, gameState, hud, terrain);
@@ -178,6 +178,7 @@ export function createGameWorld(engine, canvas, gameState, hud) {
     const pos = camera.position.add(new BABYLON.Vector3(4, -1, 4));
     spawnTreasureChest(scene, materials, interactionManager, gameState, hud, pos);
     hud.pushNotification('A hidden chest materializes nearby!', 'success', 3600);
+    avatar.playShoot();
   });
 
   gameState.addEventListener('bridge-deployed', () => {
@@ -194,6 +195,12 @@ export function createGameWorld(engine, canvas, gameState, hud) {
     playerProxy.position.copyFrom(proxyPos);
     playerProxy.rotation.y = yaw;
     followCamera.rotationOffset = 180 - BABYLON.Tools.ToDegrees(playerProxy.rotation.y);
+
+    const isMoving = Array.from(inputState.pressed).some(code => MOVEMENT_KEYS.has(code));
+    avatar.setMovementState({
+      isMoving,
+      isSprinting: inputState.isSprinting
+    });
 
     const { focused } = interactionManager;
     if (!focused) hud.hideTooltip();
