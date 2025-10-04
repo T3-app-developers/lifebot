@@ -117,6 +117,7 @@ export function createSpyIsland(scene, materials, shadowGenerator, interactionMa
     camera.position = new BABYLON.Vector3(0, 1.6, -2);
     hud.pushNotification('You descend into the spy facility.', 'info', 3200);
     gameState.emit('entered-spy-base', {});
+    gameState.setFlag('spy-portal-visited', true);
   };
 
   const exitBase = () => {
@@ -132,6 +133,7 @@ export function createSpyIsland(scene, materials, shadowGenerator, interactionMa
     const target = floorHeights[idx] + 18.4;
     animatePlatform(platform, target);
     hud.pushNotification(`Spy platform aligned to Level ${idx + 1}.`, 'info', 2400);
+    gameState.setFlag('spy-elevator', true);
   };
 
   const portalRequirements = [

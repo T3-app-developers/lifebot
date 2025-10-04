@@ -277,6 +277,7 @@ function createLagoonGondola(scene, materials, parent, interactionManager, hud, 
         hud.pushNotification('Gondola paused for boarding.', 'success', 2400);
       }
       gameState.addCoins(2, 'Lagoon excursion');
+      gameState.setFlag('resort-tour', true);
     }
   });
 
