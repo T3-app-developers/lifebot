@@ -92,6 +92,32 @@ export function createGameWorld(engine, canvas, gameState, hud) {
   const resort = createFuturisticResort(scene, materials, shadowGenerator, interactionManager, gameState, hud, terrain);
   const dinosaurManager = createDinosaurManager(scene, terrain);
 
+  const shopRoot = town?.shop?.node;
+  const shopEntranceOffset = 5.05;
+  const shopStandoffDistance = 4.5;
+  const spawnX = shopRoot ? shopRoot.position.x : 0;
+  const spawnZ = shopRoot ? shopRoot.position.z + shopEntranceOffset + shopStandoffDistance : -12;
+  const groundHeight = terrain.ground.getHeightAtCoordinates(spawnX, spawnZ) ?? 0;
+  const cameraHeight = groundHeight + playerVerticalOffset;
+  const spawnPosition = new BABYLON.Vector3(spawnX, cameraHeight, spawnZ);
+  const lookTargetZ = shopRoot ? shopRoot.position.z + shopEntranceOffset : 0;
+  const lookTarget = new BABYLON.Vector3(spawnX, groundHeight + 1.6, lookTargetZ);
+  camera.position.copyFrom(spawnPosition);
+  camera.setTarget(lookTarget);
+
+  const forwardToShop = BABYLON.Vector3.Subtract(lookTarget, spawnPosition);
+  if (forwardToShop.lengthSquared() < 0.0001) {
+    forwardToShop.copyFromFloats(0, 0, 1);
+  } else {
+    forwardToShop.normalize();
+  }
+  const initialProxyPos = spawnPosition.add(forwardToShop.scale(playerForwardOffset));
+  initialProxyPos.y -= playerVerticalOffset;
+  playerProxy.position.copyFrom(initialProxyPos);
+  const initialYaw = Math.atan2(forwardToShop.x, forwardToShop.z);
+  playerProxy.rotation.y = initialYaw;
+  followCamera.rotationOffset = 180 - BABYLON.Tools.ToDegrees(initialYaw);
+
   const stadiumRoot = createLifeBotStadium(scene, {
     parent: null,
     npcFillRatio: 0.14,
@@ -175,9 +201,6 @@ export function createGameWorld(engine, canvas, gameState, hud) {
     const { focused } = interactionManager;
     if (!focused) hud.hideTooltip();
   });
-
-  camera.position = new BABYLON.Vector3(-6, 4, -24);
-  camera.setTarget(new BABYLON.Vector3(0, 2, 0));
 
   return {
     scene,
