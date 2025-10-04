@@ -201,9 +201,20 @@ function createShop(scene, materials, shadowGenerator, position) {
   shopDoorCut.position = new BABYLON.Vector3(0, doorOpeningHeight / 2, 4.9);
   shopDoorCut.isVisible = false;
 
+  const interiorCut = BABYLON.MeshBuilder.CreateBox('shopInteriorCut', {
+    width: 12.4,
+    depth: 8.4,
+    height: 4.4
+  }, scene);
+  interiorCut.parent = shop;
+  interiorCut.position = new BABYLON.Vector3(0, 2.2, -0.2);
+  interiorCut.isVisible = false;
+
   const frameCSG = BABYLON.CSG.FromMesh(frame);
-  const shopDoorCSG = BABYLON.CSG.FromMesh(shopDoorCut);
-  const carvedFrame = frameCSG.subtract(shopDoorCSG).toMesh(frame.name, frame.material, scene);
+  const carvedFrameCSG = frameCSG
+    .subtract(BABYLON.CSG.FromMesh(shopDoorCut))
+    .subtract(BABYLON.CSG.FromMesh(interiorCut));
+  const carvedFrame = carvedFrameCSG.toMesh(frame.name, frame.material, scene);
   carvedFrame.position = frame.position.clone();
   carvedFrame.rotation = frame.rotation.clone();
   carvedFrame.scaling = frame.scaling.clone();
@@ -214,7 +225,25 @@ function createShop(scene, materials, shadowGenerator, position) {
 
   frame.dispose();
   shopDoorCut.dispose();
+  interiorCut.dispose();
   frame = carvedFrame;
+
+  const floor = BABYLON.MeshBuilder.CreateBox('shopFloor', { width: 11.6, depth: 7.8, height: 0.15 }, scene);
+  floor.position = new BABYLON.Vector3(0, 0.075, -0.4);
+  const floorMat = materials.wood.clone('shopFloorMat');
+  floorMat.albedoColor = new BABYLON.Color3(0.75, 0.72, 0.68);
+  floor.material = floorMat;
+  floor.parent = shop;
+
+  const accent = BABYLON.MeshBuilder.CreatePlane('shopAccent', { width: 3, height: 3 }, scene);
+  accent.position = new BABYLON.Vector3(0, 3, -3.7);
+  accent.rotation = new BABYLON.Vector3(0, Math.PI, 0);
+  const accentMat = new BABYLON.StandardMaterial('shopAccentMat', scene);
+  accentMat.emissiveColor = new BABYLON.Color3(0.05, 0.2, 0.35);
+  accentMat.alpha = 0.6;
+  accentMat.backFaceCulling = false;
+  accent.material = accentMat;
+  accent.parent = shop;
 
   const awning = BABYLON.MeshBuilder.CreateBox('shopAwning', { width: 14, depth: 1.6, height: 0.4 }, scene);
   awning.position = new BABYLON.Vector3(0, 4.6, 5.3);
@@ -223,11 +252,26 @@ function createShop(scene, materials, shadowGenerator, position) {
   awning.material = awningMat;
   awning.parent = shop;
 
-  const counter = BABYLON.MeshBuilder.CreateBox('shopCounter', { width: 10, depth: 2, height: 1 }, scene);
-  counter.position = new BABYLON.Vector3(0, 1, 4.4);
+  const counter = BABYLON.MeshBuilder.CreateBox('shopCounter', { width: 4.2, depth: 1.4, height: 1 }, scene);
+  counter.position = new BABYLON.Vector3(-3.8, 1, 2.4);
+  counter.rotation = new BABYLON.Vector3(0, Math.PI / 8, 0);
   counter.material = materials.wood.clone('shopCounterMat');
-  counter.material.albedoColor = new BABYLON.Color3(0.4, 0.3, 0.2);
+  counter.material.albedoColor = new BABYLON.Color3(0.38, 0.28, 0.22);
   counter.parent = shop;
+
+  const counterShelf = BABYLON.MeshBuilder.CreateBox('shopCounterShelf', { width: 3.8, depth: 0.6, height: 0.12 }, scene);
+  counterShelf.parent = shop;
+  counterShelf.position = new BABYLON.Vector3(-3.6, 1.6, 1.2);
+  counterShelf.material = counter.material.clone('shopCounterShelfMat');
+  counterShelf.material.albedoColor = new BABYLON.Color3(0.45, 0.33, 0.25);
+
+  const lightStrip = BABYLON.MeshBuilder.CreateBox('shopLightStrip', { width: 8, height: 0.08, depth: 0.4 }, scene);
+  lightStrip.parent = shop;
+  lightStrip.position = new BABYLON.Vector3(0, 4.6, -1.2);
+  const lightMat = new BABYLON.StandardMaterial('shopLightMat', scene);
+  lightMat.emissiveColor = new BABYLON.Color3(0.6, 0.7, 0.95);
+  lightMat.diffuseColor = new BABYLON.Color3(0.1, 0.1, 0.15);
+  lightStrip.material = lightMat;
 
   const sign = BABYLON.MeshBuilder.CreatePlane('shopSign', { width: 6, height: 2 }, scene);
   sign.position = new BABYLON.Vector3(0, 5.8, 5.2);
@@ -327,20 +371,223 @@ function createShop(scene, materials, shadowGenerator, position) {
   const toggleDoor = () => (doorState.open ? closeDoor() : openDoor());
 
   const items = [];
+  const createHitbox = (id, parent) => {
+    const hitbox = BABYLON.MeshBuilder.CreateBox(`shopItemHit_${id}`, { width: 1.6, height: 2.2, depth: 1.6 }, scene);
+    hitbox.isVisible = false;
+    hitbox.parent = parent;
+    hitbox.position.y = 1.1;
+    return hitbox;
+  };
+
   const itemData = [
-    { id: 'energy-drink', name: 'Energy Drink', price: 6, color: new BABYLON.Color3(0.7, 0.2, 0.8), description: 'Restores sprint instantly.' },
-    { id: 'repair-kit', name: 'Repair Kit', price: 9, color: new BABYLON.Color3(0.2, 0.8, 0.6), description: 'Useful for drone repairs.' },
-    { id: 'spy-pass', name: 'Spy Clearance Badge', price: 14, color: new BABYLON.Color3(0.9, 0.6, 0.1), description: 'Required to access the spy island elevator.' }
+    {
+      id: 'energy-drink',
+      name: 'Energy Drink',
+      price: 6,
+      description: 'Restores sprint instantly.',
+      position: new BABYLON.Vector3(-2.8, 0, -0.8),
+      build: parent => {
+        const pedestal = BABYLON.MeshBuilder.CreateCylinder('energyPedestal', { diameter: 1.5, height: 0.4, tessellation: 32 }, scene);
+        pedestal.material = counter.material.clone('energyPedestalMat');
+        pedestal.material.albedoColor = new BABYLON.Color3(0.32, 0.28, 0.24);
+        pedestal.parent = parent;
+        pedestal.position.y = 0.2;
+
+        const bottle = BABYLON.MeshBuilder.CreateCylinder('energyBottle', {
+          diameterTop: 0.45,
+          diameterBottom: 0.55,
+          height: 1.4,
+          tessellation: 24
+        }, scene);
+        const bottleMat = materials.glass.clone('energyBottleMat');
+        bottleMat.alpha = 0.75;
+        bottleMat.emissiveColor = new BABYLON.Color3(0.5, 0.15, 0.7);
+        bottleMat.diffuseColor = new BABYLON.Color3(0.4, 0.1, 0.6);
+        bottle.material = bottleMat;
+        bottle.parent = parent;
+        bottle.position.y = 1.1;
+
+        const cap = BABYLON.MeshBuilder.CreateCylinder('energyCap', { diameter: 0.45, height: 0.2 }, scene);
+        cap.parent = parent;
+        cap.position.y = 1.9;
+        const capMat = materials.metal.clone('energyCapMat');
+        capMat.albedoColor = new BABYLON.Color3(0.9, 0.9, 0.95);
+        cap.material = capMat;
+
+        const label = BABYLON.MeshBuilder.CreatePlane('energyLabel', { width: 0.9, height: 0.6 }, scene);
+        label.parent = parent;
+        label.position = new BABYLON.Vector3(0, 1.2, 0.3);
+        const labelTex = new BABYLON.DynamicTexture('energyLabelTex', { width: 256, height: 128 }, scene, true);
+        const labelCtx = labelTex.getContext();
+        labelCtx.fillStyle = '#0f172a';
+        labelCtx.fillRect(0, 0, 256, 128);
+        labelCtx.fillStyle = '#7c3aed';
+        labelCtx.beginPath();
+        labelCtx.moveTo(16, 64);
+        labelCtx.lineTo(90, 16);
+        labelCtx.lineTo(170, 64);
+        labelCtx.lineTo(90, 112);
+        labelCtx.closePath();
+        labelCtx.fill();
+        labelCtx.fillStyle = '#e0f2fe';
+        labelCtx.font = 'bold 52px Inter';
+        labelCtx.textAlign = 'center';
+        labelCtx.textBaseline = 'middle';
+        labelCtx.fillText('BOOST', 176, 64);
+        labelTex.update(false);
+        const labelMat = new BABYLON.StandardMaterial('energyLabelMat', scene);
+        labelMat.diffuseTexture = labelTex;
+        labelMat.emissiveColor = new BABYLON.Color3(0.4, 0.2, 0.7);
+        label.material = labelMat;
+        return bottle;
+      }
+    },
+    {
+      id: 'repair-kit',
+      name: 'Repair Kit',
+      price: 9,
+      description: 'Useful for drone repairs.',
+      position: new BABYLON.Vector3(0, 0, -2.2),
+      build: parent => {
+        const table = BABYLON.MeshBuilder.CreateBox('repairTable', { width: 1.8, depth: 1, height: 0.2 }, scene);
+        table.parent = parent;
+        table.position.y = 0.1;
+        table.material = counterShelf.material.clone('repairTableMat');
+        table.material.albedoColor = new BABYLON.Color3(0.3, 0.36, 0.4);
+
+        const caseBase = BABYLON.MeshBuilder.CreateBox('repairCaseBase', { width: 1.4, depth: 0.8, height: 0.4 }, scene);
+        caseBase.parent = parent;
+        caseBase.position.y = 0.5;
+        const caseMat = materials.metal.clone('repairCaseMat');
+        caseMat.albedoColor = new BABYLON.Color3(0.75, 0.3, 0.1);
+        caseBase.material = caseMat;
+
+        const caseLid = BABYLON.MeshBuilder.CreateBox('repairCaseLid', { width: 1.4, depth: 0.05, height: 0.9 }, scene);
+        caseLid.parent = parent;
+        caseLid.position = new BABYLON.Vector3(0, 0.85, -0.32);
+        caseLid.rotation.x = Math.PI / 8;
+        caseLid.material = caseMat.clone('repairCaseLidMat');
+
+        const handle = BABYLON.MeshBuilder.CreateTorus('repairHandle', {
+          diameter: 0.6,
+          thickness: 0.1,
+          tessellation: 16
+        }, scene);
+        handle.parent = parent;
+        handle.rotation.x = Math.PI / 2;
+        handle.position = new BABYLON.Vector3(0, 0.78, 0.45);
+        const handleMat = materials.metal.clone('repairHandleMat');
+        handleMat.albedoColor = new BABYLON.Color3(0.95, 0.95, 0.95);
+        handle.material = handleMat;
+
+        const wrench1 = BABYLON.MeshBuilder.CreateBox('repairWrench1', { width: 0.2, depth: 0.05, height: 1.1 }, scene);
+        wrench1.parent = parent;
+        wrench1.position = new BABYLON.Vector3(-0.3, 0.6, 0);
+        wrench1.rotation.z = Math.PI / 8;
+        const wrenchMat = materials.metal.clone('repairWrenchMat');
+        wrenchMat.albedoColor = new BABYLON.Color3(0.85, 0.9, 0.95);
+        wrench1.material = wrenchMat;
+
+        const wrench2 = wrench1.clone('repairWrench2');
+        wrench2.position = new BABYLON.Vector3(0.3, 0.65, 0.1);
+        wrench2.rotation.z = -Math.PI / 6;
+
+        const holo = BABYLON.MeshBuilder.CreatePlane('repairHolo', { width: 1.2, height: 0.6 }, scene);
+        holo.parent = parent;
+        holo.position = new BABYLON.Vector3(0, 1.3, 0.05);
+        const holoTex = new BABYLON.DynamicTexture('repairHoloTex', { width: 256, height: 128 }, scene, true);
+        const holoCtx = holoTex.getContext();
+        holoCtx.fillStyle = '#0a1a24';
+        holoCtx.fillRect(0, 0, 256, 128);
+        holoCtx.fillStyle = '#67e8f9';
+        holoCtx.font = 'bold 48px Inter';
+        holoCtx.textAlign = 'center';
+        holoCtx.textBaseline = 'middle';
+        holoCtx.fillText('DRONE CARE', 128, 60);
+        holoCtx.fillStyle = '#38bdf8';
+        holoCtx.fillText('TOOLS', 128, 110);
+        holoTex.update(false);
+        const holoMat = new BABYLON.StandardMaterial('repairHoloMat', scene);
+        holoMat.diffuseTexture = holoTex;
+        holoMat.emissiveColor = new BABYLON.Color3(0.2, 0.8, 0.9);
+        holoMat.alpha = 0.85;
+        holo.material = holoMat;
+        return caseBase;
+      }
+    },
+    {
+      id: 'spy-pass',
+      name: 'Spy Clearance Badge',
+      price: 14,
+      description: 'Required to access the spy island elevator.',
+      position: new BABYLON.Vector3(2.8, 0, -1),
+      build: parent => {
+        const stand = BABYLON.MeshBuilder.CreateCylinder('spyStand', { diameterTop: 0.6, diameterBottom: 0.8, height: 0.6 }, scene);
+        stand.parent = parent;
+        stand.position.y = 0.3;
+        const standMat = materials.metal.clone('spyStandMat');
+        standMat.albedoColor = new BABYLON.Color3(0.2, 0.28, 0.35);
+        stand.material = standMat;
+
+        const badge = BABYLON.MeshBuilder.CreatePlane('spyBadge', { width: 1.4, height: 1 }, scene);
+        badge.parent = parent;
+        badge.position = new BABYLON.Vector3(0, 1.2, 0);
+        badge.rotation = new BABYLON.Vector3(0, Math.PI, Math.PI / 18);
+        const badgeTex = new BABYLON.DynamicTexture('spyBadgeTex', { width: 512, height: 384 }, scene, true);
+        const badgeCtx = badgeTex.getContext();
+        badgeCtx.fillStyle = '#020617';
+        badgeCtx.fillRect(0, 0, 512, 384);
+        badgeCtx.fillStyle = '#facc15';
+        badgeCtx.beginPath();
+        badgeCtx.moveTo(60, 320);
+        badgeCtx.lineTo(256, 60);
+        badgeCtx.lineTo(452, 320);
+        badgeCtx.closePath();
+        badgeCtx.fill();
+        badgeCtx.fillStyle = '#0f172a';
+        badgeCtx.font = 'bold 72px Inter';
+        badgeCtx.textAlign = 'center';
+        badgeCtx.fillText('SPY', 256, 200);
+        badgeCtx.font = 'bold 48px Inter';
+        badgeCtx.fillText('CLEARANCE', 256, 280);
+        badgeTex.update(false);
+        const badgeMat = new BABYLON.StandardMaterial('spyBadgeMat', scene);
+        badgeMat.diffuseTexture = badgeTex;
+        badgeMat.emissiveColor = new BABYLON.Color3(0.8, 0.7, 0.2);
+        badge.material = badgeMat;
+
+        const projector = BABYLON.MeshBuilder.CreateBox('spyProjector', { width: 0.6, depth: 0.6, height: 0.4 }, scene);
+        projector.parent = parent;
+        projector.position = new BABYLON.Vector3(0, 0.6, -0.25);
+        const projectorMat = materials.metal.clone('spyProjectorMat');
+        projectorMat.albedoColor = new BABYLON.Color3(0.18, 0.24, 0.35);
+        projector.material = projectorMat;
+
+        const beam = BABYLON.MeshBuilder.CreateCylinder('spyBeam', { diameter: 0.2, height: 1.2, tessellation: 12 }, scene);
+        beam.parent = parent;
+        beam.position = new BABYLON.Vector3(0, 1, -0.2);
+        const beamMat = new BABYLON.StandardMaterial('spyBeamMat', scene);
+        beamMat.emissiveColor = new BABYLON.Color3(0.95, 0.85, 0.25);
+        beamMat.alpha = 0.6;
+        beam.material = beamMat;
+        return badge;
+      }
+    }
   ];
 
-  itemData.forEach((data, index) => {
-    const mesh = BABYLON.MeshBuilder.CreateCylinder(`shopItem_${data.id}`, { diameter: 1, height: 0.8 }, scene);
-    mesh.material = materials.metal.clone(`shopItemMat_${data.id}`);
-    mesh.material.albedoColor = data.color;
-    mesh.position = new BABYLON.Vector3(-3 + index * 3, 1.4, 3.2);
-    mesh.parent = shop;
-    mesh.metadata = { item: data };
-    items.push(mesh);
+  itemData.forEach(data => {
+    const root = new BABYLON.TransformNode(`shopItemRoot_${data.id}`, scene);
+    root.parent = shop;
+    root.position = data.position;
+    const featuredMesh = data.build(root);
+    const hitbox = createHitbox(data.id, root);
+    hitbox.metadata = { item: data };
+    items.push(hitbox);
+
+    if (featuredMesh) {
+      featuredMesh.metadata = featuredMesh.metadata || {};
+      featuredMesh.metadata.itemId = data.id;
+    }
   });
 
   return {

@@ -182,9 +182,6 @@ export function createGameWorld(engine, canvas, gameState, hud) {
     if (!focused) hud.hideTooltip();
   });
 
-  camera.position = new BABYLON.Vector3(-6, 4, -24);
-  camera.setTarget(new BABYLON.Vector3(0, 2, 0));
-
   return {
     scene,
     camera,
