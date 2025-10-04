@@ -1,5 +1,9 @@
 export function setupInput(scene, camera, gameState, hud) {
   const pressed = new Set();
+  const state = {
+    pressed,
+    isSprinting: false
+  };
   const baseSpeed = 0.6;
   const sprintSpeed = 1.15;
   camera.speed = baseSpeed;
@@ -37,6 +41,7 @@ export function setupInput(scene, camera, gameState, hud) {
 
     if (ev.code === 'ShiftLeft' || ev.code === 'ShiftRight') {
       camera.speed = sprintSpeed;
+      state.isSprinting = true;
     }
     if (ev.code === 'Space') {
       tryJump();
@@ -59,6 +64,7 @@ export function setupInput(scene, camera, gameState, hud) {
     pressed.delete(ev.code);
     if (ev.code === 'ShiftLeft' || ev.code === 'ShiftRight') {
       camera.speed = baseSpeed;
+      state.isSprinting = pressed.has('ShiftLeft') || pressed.has('ShiftRight');
     }
   });
 
@@ -74,5 +80,5 @@ export function setupInput(scene, camera, gameState, hud) {
     }
   });
 
-  return { pressed };
+  return state;
 }
