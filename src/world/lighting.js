@@ -1,8 +1,8 @@
 const dayFogColor = new BABYLON.Color3(0.08, 0.11, 0.16);
-const nightFogColor = new BABYLON.Color3(0.02, 0.04, 0.08);
+const nightFogColor = new BABYLON.Color3(0.04, 0.06, 0.12);
 const duskFogColor = new BABYLON.Color3(0.1, 0.07, 0.12);
 const daySkyColor = new BABYLON.Color3(0.45, 0.62, 0.96);
-const nightSkyColor = new BABYLON.Color3(0.02, 0.05, 0.1);
+const nightSkyColor = new BABYLON.Color3(0.05, 0.08, 0.16);
 const sunriseSkyColor = new BABYLON.Color3(0.78, 0.36, 0.22);
 
 function paintSkyTexture(texture, topColor, bottomColor) {
@@ -16,13 +16,14 @@ function paintSkyTexture(texture, topColor, bottomColor) {
   texture.update(false);
 }
 
-function createDayNightCycle(scene, { sun, ambient, skybox, skyboxTexture }) {
+function createDayNightCycle(scene, { sun, moon, ambient, skybox, skyboxTexture }) {
   const cycleDurationMs = 4 * 60 * 1000;
   const skyboxMaterial = skybox.material;
   const imageProcessing = scene.imageProcessingConfiguration;
   const nightSunColor = new BABYLON.Color3(0.25, 0.36, 0.55);
   const twilightSunColor = new BABYLON.Color3(1.0, 0.58, 0.32);
   const daySunColor = new BABYLON.Color3(1.0, 0.96, 0.88);
+  const moonColor = new BABYLON.Color3(0.52, 0.62, 0.8);
   const fogColor = new BABYLON.Color3();
   const skyTint = new BABYLON.Color3();
   const sunTint = new BABYLON.Color3();
@@ -42,6 +43,10 @@ function createDayNightCycle(scene, { sun, ambient, skybox, skyboxTexture }) {
     sun.direction.copyFrom(direction);
     sun.position.copyFrom(direction.scale(-220));
 
+    const moonDirection = direction.scale(-1);
+    moon.direction.copyFrom(moonDirection);
+    moon.position.copyFrom(moonDirection.scale(-260));
+
     BABYLON.Color3.LerpToRef(nightSunColor, twilightSunColor, twilight, sunTint);
     BABYLON.Color3.LerpToRef(sunTint, daySunColor, daylight, sunTint);
     sun.diffuse.copyFrom(sunTint);
@@ -50,12 +55,18 @@ function createDayNightCycle(scene, { sun, ambient, skybox, skyboxTexture }) {
     const sunBaseIntensity = BABYLON.Scalar.Lerp(0.12, 2.2, daylight);
     sun.intensity = sunBaseIntensity + twilight * 0.45;
 
-    ambient.intensity = BABYLON.Scalar.Lerp(0.18, 0.55, daylight) + twilight * 0.15;
+    const nightFactor = BABYLON.Scalar.Clamp(1 - daylight * 1.4, 0, 1);
+    const moonIntensity = BABYLON.Scalar.Lerp(0.18, 0.7, nightFactor) + twilight * 0.25;
+    moon.diffuse.copyFrom(moonColor);
+    moon.specular.copyFrom(moonColor);
+    moon.intensity = moonIntensity;
 
-    scene.environmentIntensity = BABYLON.Scalar.Lerp(0.4, 1.0, daylight) + twilight * 0.2;
+    ambient.intensity = BABYLON.Scalar.Lerp(0.26, 0.55, daylight) + twilight * 0.22;
 
-    imageProcessing.exposure = BABYLON.Scalar.Lerp(0.7, 1.4, daylight) + twilight * 0.25;
-    imageProcessing.contrast = BABYLON.Scalar.Lerp(1.05, 1.25, daylight);
+    scene.environmentIntensity = BABYLON.Scalar.Lerp(0.55, 1.05, daylight) + twilight * 0.25;
+
+    imageProcessing.exposure = BABYLON.Scalar.Lerp(0.95, 1.4, daylight) + twilight * 0.3;
+    imageProcessing.contrast = BABYLON.Scalar.Lerp(1.0, 1.22, daylight);
 
     BABYLON.Color3.LerpToRef(nightFogColor, duskFogColor, twilight, fogColor);
     BABYLON.Color3.LerpToRef(fogColor, dayFogColor, daylight, fogColor);
@@ -114,6 +125,12 @@ export function setupLighting(scene) {
   sun.shadowMaxZ = 300;
   sun.shadowMinZ = -40;
 
+  const moon = new BABYLON.DirectionalLight('moonLight', new BABYLON.Vector3(0.25, -1, 0.35), scene);
+  moon.diffuse = new BABYLON.Color3(0.52, 0.62, 0.8);
+  moon.specular = new BABYLON.Color3(0.48, 0.56, 0.72);
+  moon.intensity = 0.35;
+  moon.autoUpdateExtends = true;
+
   const shadowGenerator = new BABYLON.ShadowGenerator(4096, sun);
   shadowGenerator.useContactHardeningShadow = true;
   shadowGenerator.contactHardeningLightSizeUVRatio = 0.15;
@@ -156,8 +173,8 @@ export function setupLighting(scene) {
 
   scene.clearColor = new BABYLON.Color4(0.16, 0.2, 0.28, 1);
 
-  const dayNightCycle = createDayNightCycle(scene, { sun, ambient, skybox, skyboxTexture });
+  const dayNightCycle = createDayNightCycle(scene, { sun, moon, ambient, skybox, skyboxTexture });
   dayNightCycle.setTime(0.25);
 
-  return { sun, shadowGenerator, dayNightCycle };
+  return { sun, moon, shadowGenerator, dayNightCycle };
 }
