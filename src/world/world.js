@@ -77,7 +77,10 @@ export function createGameWorld(engine, canvas, gameState, hud) {
   const forwardVec = new BABYLON.Vector3();
   const proxyPos = new BABYLON.Vector3();
   const playerForwardOffset = 0.9;
-  let playerVerticalOffset = (camera.ellipsoid?.y || 1.8) + (camera.ellipsoidOffset?.y || 0);
+  let playerVerticalOffset = 0;
+  const updatePlayerVerticalOffset = () => {
+    playerVerticalOffset = (camera.ellipsoid?.y || 1.8) + (camera.ellipsoidOffset?.y || 0);
+  };
 
   const { shadowGenerator } = setupLighting(scene);
   const materials = createMaterials(scene);
@@ -94,6 +97,7 @@ export function createGameWorld(engine, canvas, gameState, hud) {
   const resort = createFuturisticResort(scene, materials, shadowGenerator, interactionManager, gameState, hud, terrain);
   const dinosaurManager = createDinosaurManager(scene, terrain);
   const inputState = setupInput(scene, camera, gameState, hud);
+  updatePlayerVerticalOffset();
 
   const setInitialSpawn = () => {
     const spawnPosition = new BABYLON.Vector3(0, 0, -8);
@@ -187,6 +191,10 @@ export function createGameWorld(engine, canvas, gameState, hud) {
   });
 
   scene.onBeforeRenderObservable.add(() => {
+    if (scene.activeCamera === followCamera && typeof camera._checkInputs === 'function') {
+      camera._checkInputs();
+    }
+
     const forward = camera.getForwardRay().direction;
     forwardVec.copyFrom(forward).normalize();
     const yaw = Math.atan2(forwardVec.x, forwardVec.z);

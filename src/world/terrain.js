@@ -121,10 +121,13 @@ function scatterTrees(scene, materials, shadowGenerator, ground) {
 }
 
 function createLamppost(scene, materials) {
+  const root = new BABYLON.TransformNode('lamppostRoot', scene);
+
   const pole = BABYLON.MeshBuilder.CreateCylinder('lampPole', { height: 6.4, diameter: 0.22, tessellation: 20 }, scene);
   pole.material = materials.metal;
   pole.isPickable = false;
   pole.checkCollisions = false;
+  pole.parent = root;
 
   const base = BABYLON.MeshBuilder.CreateCylinder('lampBase', { height: 0.4, diameterTop: 0.5, diameterBottom: 0.7 }, scene);
   base.parent = pole;
@@ -153,14 +156,17 @@ function createLamppost(scene, materials) {
   glowDisc.parent = pole;
   glowDisc.isPickable = false;
 
-  const light = new BABYLON.SpotLight('lampLight', new BABYLON.Vector3(0, 3.2, 0), new BABYLON.Vector3(0, -1, 0), Math.PI / 3.2, 12, scene);
+  return root;
+}
+
+function attachLamppostLight(scene, lamppost, name) {
+  const light = new BABYLON.SpotLight(name, new BABYLON.Vector3(0, 3.2, 0), new BABYLON.Vector3(0, -1, 0), Math.PI / 3.2, 12, scene);
   light.diffuse = new BABYLON.Color3(0.95, 0.98, 1);
   light.specular = new BABYLON.Color3(0.8, 0.85, 0.95);
   light.intensity = 0.75;
   light.range = 22;
-  light.parent = pole;
-
-  return pole;
+  light.parent = lamppost;
+  return light;
 }
 
 export function createTerrain(scene, materials, shadowGenerator) {
@@ -225,6 +231,7 @@ export function createTerrain(scene, materials, shadowGenerator) {
     const clone = lamppost.clone(`lamp_${idx}`);
     clone.setEnabled(true);
     clone.position = pos.add(new BABYLON.Vector3(0, 3, 0));
+    attachLamppostLight(scene, clone, `lampLight_${idx}`);
     lampposts.push(clone);
   });
   lamppost.dispose();
