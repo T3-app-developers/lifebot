@@ -11,7 +11,7 @@ export class GameState extends EventTarget {
     this.hiddenSequence = [];
     this.settings = {
       gameplay: {
-        viewMode: 'third-person-back',
+        viewMode: 'first-person',
         dinosaursEnabled: false
       },
       avatar: {

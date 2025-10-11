@@ -174,7 +174,8 @@ export function setupLighting(scene) {
   scene.clearColor = new BABYLON.Color4(0.16, 0.2, 0.28, 1);
 
   const dayNightCycle = createDayNightCycle(scene, { sun, moon, ambient, skybox, skyboxTexture });
-  dayNightCycle.setTime(0.25);
+  const MORNING_LIGHT_STAGE = 0.12; // soft morning sunlight with the sun just above the horizon
+  dayNightCycle.setTime(MORNING_LIGHT_STAGE);
 
   return { sun, moon, shadowGenerator, dayNightCycle };
 }
