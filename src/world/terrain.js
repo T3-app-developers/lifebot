@@ -177,6 +177,39 @@ export function createTerrain(scene, materials, shadowGenerator) {
 
   sculptTerrain(ground);
 
+  const rockyHills = BABYLON.MeshBuilder.CreateGround('rockyHills', {
+    width: 260,
+    height: 260,
+    subdivisions: 160,
+    updatable: true
+  }, scene);
+  rockyHills.material = materials.rockyGround;
+  rockyHills.receiveShadows = true;
+  rockyHills.checkCollisions = true;
+  rockyHills.position.y = 0.02;
+
+  sculptTerrain(rockyHills);
+  const rockyPositions = rockyHills.getVerticesData(BABYLON.VertexBuffer.PositionKind);
+  for (let i = 0; i < rockyPositions.length; i += 3) {
+    const x = rockyPositions[i];
+    const z = rockyPositions[i + 2];
+    const distance = Math.sqrt(x * x + z * z);
+    const innerRadius = 70;
+    const transitionBand = 20;
+    if (distance < innerRadius) {
+      const fade = 1 - distance / innerRadius;
+      rockyPositions[i + 1] -= fade * 6;
+    } else if (distance < innerRadius + transitionBand) {
+      const blend = (distance - innerRadius) / transitionBand;
+      rockyPositions[i + 1] += blend * 0.3;
+    } else {
+      const rise = Math.min(1, (distance - (innerRadius + transitionBand)) / 40);
+      rockyPositions[i + 1] += 0.6 * rise;
+    }
+  }
+  rockyHills.updateVerticesData(BABYLON.VertexBuffer.PositionKind, rockyPositions, true, false);
+  rockyHills.refreshBoundingInfo();
+
   const water = BABYLON.MeshBuilder.CreateGround('waterPlane', { width: 600, height: 600, subdivisions: 16 }, scene);
   water.position.y = -1.8;
   const waterMaterial = new BABYLON.WaterMaterial('waterMaterial', scene);
@@ -203,6 +236,7 @@ export function createTerrain(scene, materials, shadowGenerator) {
   waterMaterial.colorBlendFactor = 0.35;
   waterMaterial.waterColor = new BABYLON.Color3(0.08, 0.32, 0.54);
   waterMaterial.addToRenderList(ground);
+  waterMaterial.addToRenderList(rockyHills);
   water.material = waterMaterial;
   water.isPickable = false;
 
@@ -330,5 +364,5 @@ export function createTerrain(scene, materials, shadowGenerator) {
 
   sproutPrototype.dispose();
 
-  return { ground, water, waterMaterial, plaza, pier, lampposts, trees, farmland, cropRows };
+  return { ground, rockyHills, water, waterMaterial, plaza, pier, lampposts, trees, farmland, cropRows };
 }

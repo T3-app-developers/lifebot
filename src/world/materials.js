@@ -133,6 +133,15 @@ export function createMaterials(scene) {
   const metal = createStandardMaterial(scene, 'metalMat', new BABYLON.Color3(0.58, 0.62, 0.72));
   metal.specularColor = new BABYLON.Color3(0.7, 0.72, 0.76);
 
+  const rockyGround = createStandardMaterial(scene, 'rockyGroundMat', new BABYLON.Color3(0.4, 0.4, 0.4));
+  rockyGround.diffuseTexture = new BABYLON.Texture('assets/rocky_terrain_diff_4k.jpg', scene);
+  rockyGround.diffuseTexture.uScale = 5;
+  rockyGround.diffuseTexture.vScale = 5;
+  rockyGround.diffuseTexture.wrapU = BABYLON.Texture.WRAP_ADDRESSMODE;
+  rockyGround.diffuseTexture.wrapV = BABYLON.Texture.WRAP_ADDRESSMODE;
+  rockyGround.specularColor = new BABYLON.Color3(0.06, 0.06, 0.06);
+  rockyGround.specularPower = 64;
+
   const wood = createStandardMaterial(scene, 'woodMat', new BABYLON.Color3(0.52, 0.36, 0.24));
   wood.diffuseTexture = createStripeTexture(scene, 'woodTex', {
     stripes: 16,
@@ -175,6 +184,7 @@ export function createMaterials(scene) {
     plaza,
     brick,
     metal,
+    rockyGround,
     wood,
     neon,
     glass,
