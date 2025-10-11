@@ -834,5 +834,50 @@ export function createTown(scene, materials, shadowGenerator, interactionManager
     });
   }
 
+  BABYLON.SceneLoader.ImportMeshAsync('', 'assets/', 'brio_psx_style_han66st.glb', scene).then(({ meshes }) => {
+    const carRoot = new BABYLON.TransformNode('townCourierCar', scene);
+    carRoot.parent = town;
+
+    const carPosition = new BABYLON.Vector3(6, sampleHeight(6, -8), -8);
+    carRoot.position.copyFrom(carPosition);
+    carRoot.rotation = new BABYLON.Vector3(0, BABYLON.Tools.ToRadians(105), 0);
+    carRoot.scaling = new BABYLON.Vector3(0.9, 0.9, 0.9);
+
+    let interactionTarget = null;
+    meshes.forEach(mesh => {
+      if (!mesh) return;
+      if (mesh.name === '__root__') {
+        mesh.parent = carRoot;
+        return;
+      }
+
+      mesh.parent = carRoot;
+
+      if (mesh instanceof BABYLON.AbstractMesh) {
+        mesh.checkCollisions = true;
+        shadowGenerator?.addShadowCaster(mesh);
+        if (!interactionTarget) {
+          interactionTarget = mesh;
+        }
+      }
+    });
+
+    if (interactionManager && interactionTarget) {
+      interactionManager.register(interactionTarget, {
+        prompt: 'Press E to inspect the car',
+        tooltip: '<strong>Courier Vehicle</strong><br/>Search for clues about its owner.',
+        action: () => {
+          if (!gameState.hasFlag('town-car-inspected')) {
+            hud.pushNotification('Inside the courier car you find a stadium delivery manifest.', 'info', 3200);
+            gameState.setFlag('town-car-inspected', true);
+            gameState.emit('town-car-inspected', {});
+          } else {
+            hud.pushNotification('You already checked the courier car. Nothing else stands out.', 'info', 2600);
+          }
+        }
+      });
+    }
+  });
+
   return { town, houses, shop, flameBot, jobBoard };
 }
