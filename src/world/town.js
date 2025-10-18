@@ -879,5 +879,43 @@ export function createTown(scene, materials, shadowGenerator, interactionManager
     }
   });
 
+  BABYLON.SceneLoader.ImportMeshAsync('', 'assets/', 'weirdmoon.glb', scene).then(({ meshes }) => {
+    const moonRoot = new BABYLON.TransformNode('townWeirdMoon', scene);
+    moonRoot.parent = town;
+    moonRoot.scaling.setAll(2.5);
+
+    const importedRoot = meshes.find(mesh => mesh?.name === '__root__');
+    if (importedRoot) {
+      importedRoot.parent = moonRoot;
+      importedRoot.isPickable = false;
+    }
+
+    let referenceMesh = null;
+    meshes.forEach(mesh => {
+      if (!mesh || mesh === importedRoot) {
+        return;
+      }
+
+      mesh.parent = importedRoot ?? moonRoot;
+      if (mesh instanceof BABYLON.AbstractMesh) {
+        mesh.checkCollisions = false;
+        mesh.isPickable = false;
+        mesh.receiveShadows = false;
+
+        if (!referenceMesh) {
+          referenceMesh = mesh;
+        }
+      }
+    });
+
+    if (referenceMesh) {
+      referenceMesh.computeWorldMatrix(true);
+      const radius = referenceMesh.getBoundingInfo().boundingSphere.radiusWorld;
+      moonRoot.position = new BABYLON.Vector3(0, sampleHeight(0, 0) + radius + 20, 0);
+    } else {
+      moonRoot.position = new BABYLON.Vector3(0, sampleHeight(0, 0) + 45, 0);
+    }
+  });
+
   return { town, houses, shop, flameBot, jobBoard };
 }
