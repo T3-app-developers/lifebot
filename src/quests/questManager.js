@@ -46,6 +46,20 @@ export function createQuestManager({ gameState, hud, interactionManager }) {
     updateObjectives(questId);
   }
 
+  const firstSteps = {
+    id: 'first-steps',
+    title: 'First Steps in Lifebot Town',
+    description: 'Reach the plaza fountain and sync with FlameBot for your welcome stipend.',
+    completionText: 'Starter stipend collected. FlameBot trusts you with the next task.',
+    rewardText: 'Welcome bonus applied',
+    rewardCoins: 10,
+    objectives: [
+      { id: 'reach-fountain', label: 'Walk to the plaza fountain', active: true, completed: false },
+      { id: 'speak-flamebot', label: 'Press E to talk to FlameBot', active: false, completed: false },
+      { id: 'claim-coins', label: 'Collect your welcome coins', active: false, completed: false }
+    ]
+  };
+
   const harborBriefing = {
     id: 'harbor-briefing',
     title: 'Harbor Systems Check',
@@ -58,6 +72,18 @@ export function createQuestManager({ gameState, hud, interactionManager }) {
       { id: 'collect-water', label: 'Collect a purified water sample from the residences.', active: true, completed: false },
       { id: 'deliver-water', label: 'Deliver the sample to FlameBot in the plaza.', active: false, completed: false },
       { id: 'deploy-bridge', label: 'Deploy the harbor bridge from its control console.', active: false, completed: false }
+    ]
+  };
+
+  const explorerHatQuest = {
+    id: 'suit-up',
+    title: 'Suit Up for Adventure',
+    description: 'Visit Lifebot Supply and pick up the Explorer Hat to celebrate your stipend.',
+    completionText: 'Explorer Hat secured. You look ready for anything.',
+    rewardText: 'Explorer style unlocked',
+    rewardCoins: 0,
+    objectives: [
+      { id: 'buy-hat', label: 'Purchase the Explorer Hat from Lifebot Supply', active: true, completed: false }
     ]
   };
 
@@ -74,6 +100,35 @@ export function createQuestManager({ gameState, hud, interactionManager }) {
       { id: 'decrypt-intel', label: 'Decrypt harbor intel within the spy base.', active: false, completed: false }
     ]
   };
+
+  const startHarborQuest = () => {
+    if (quests.has('harbor-briefing')) {
+      return;
+    }
+    startQuest(JSON.parse(JSON.stringify(harborBriefing)));
+    gameState.setFlag('flamebot-spoke', true);
+    hud.pushNotification('FlameBot authorized you to assist with the harbor systems.', 'info', 3600);
+  };
+
+  const startExplorerHatQuest = () => {
+    if (quests.has('suit-up')) {
+      return;
+    }
+    startQuest(JSON.parse(JSON.stringify(explorerHatQuest)));
+    gameState.setStatusLine('Buy the Explorer Hat from Lifebot Supply.');
+  };
+
+  gameState.addEventListener('orientation-fountain', () => {
+    const quest = quests.get('first-steps');
+    if (!quest || quest.completed) {
+      return;
+    }
+    if (!quest.objectives.find(obj => obj.id === 'reach-fountain')?.completed) {
+      markObjectiveComplete('first-steps', 'reach-fountain');
+      setObjectiveState('first-steps', 'speak-flamebot', { active: true });
+      hud.pushNotification('FlameBot is just ahead by the fountain. Say hello!', 'info', 3000);
+    }
+  });
 
   let jobsQueue = [
     { id: 'deliver-energy', label: 'Deliver an energy drink to the stadium commentator', reward: 6 },
@@ -106,10 +161,25 @@ export function createQuestManager({ gameState, hud, interactionManager }) {
   }
 
   gameState.addEventListener('flamebot-contact', () => {
+    const onboardingQuest = quests.get('first-steps');
+    if (onboardingQuest && !onboardingQuest.completed) {
+      if (!onboardingQuest.objectives.find(obj => obj.id === 'speak-flamebot')?.completed) {
+        markObjectiveComplete('first-steps', 'speak-flamebot');
+      }
+      setObjectiveState('first-steps', 'claim-coins', { active: true });
+      if (!onboardingQuest.objectives.find(obj => obj.id === 'claim-coins')?.completed) {
+        markObjectiveComplete('first-steps', 'claim-coins');
+      }
+      hud.pushNotification('FlameBot transfers a welcome bonus of 10 coins.', 'success', 3600);
+      completeQuest('first-steps');
+      gameState.setFlag('orientation-complete', true);
+      startHarborQuest();
+      startExplorerHatQuest();
+      return;
+    }
+
     if (!quests.has('harbor-briefing')) {
-      startQuest(JSON.parse(JSON.stringify(harborBriefing)));
-      gameState.setFlag('flamebot-spoke', true);
-      hud.pushNotification('FlameBot authorized you to assist with the harbor systems.', 'info', 3600);
+      startHarborQuest();
     } else if (!quests.get('harbor-briefing').completed) {
       hud.pushNotification('FlameBot awaits your progress report.', 'info', 2600);
     }
@@ -124,6 +194,27 @@ export function createQuestManager({ gameState, hud, interactionManager }) {
       markObjectiveComplete('harbor-briefing', 'collect-water');
       setObjectiveState('harbor-briefing', 'deliver-water', { active: true });
       hud.pushNotification('Bring the sample back to FlameBot.', 'info', 2800);
+    }
+    if (change?.mode === 'add' && change.id === 'explorer-hat') {
+      if (!quests.has('suit-up')) {
+        startExplorerHatQuest();
+      }
+      if (!quests.get('suit-up')?.completed) {
+        markObjectiveComplete('suit-up', 'buy-hat');
+        completeQuest('suit-up');
+        const harborQuest = quests.get('harbor-briefing');
+        if (harborQuest && !harborQuest.completed) {
+          gameState.setActiveQuest(harborQuest);
+          updateObjectives('harbor-briefing');
+          gameState.setStatusLine('Assist FlameBot with the harbor systems.');
+        }
+      }
+      gameState.setFlag('explorer-hat-owned', true);
+      hud.pushNotification('Explorer Hat unlocked! Equip it in the Avatar menu.', 'success', 3600);
+      const currentAccessory = gameState.getSettings().avatar.accessory;
+      if (currentAccessory === 'none') {
+        gameState.setAvatarOption('accessory', 'adventure-hat');
+      }
     }
     if (change?.mode === 'add' && change.id === 'spy-pass' && quests.has('spy-initiative')) {
       markObjectiveComplete('spy-initiative', 'buy-clearance');
@@ -190,6 +281,11 @@ export function createQuestManager({ gameState, hud, interactionManager }) {
       gameState.addEventListener('stadium-cheer', handler);
     }
   });
+
+  if (!quests.has('first-steps')) {
+    startQuest(JSON.parse(JSON.stringify(firstSteps)));
+    gameState.setStatusLine('Find FlameBot by the fountain to begin.');
+  }
 
   return {
     startQuest,
