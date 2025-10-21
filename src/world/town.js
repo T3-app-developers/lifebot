@@ -443,6 +443,69 @@ function createShop(scene, materials, shadowGenerator, position) {
       }
     },
     {
+      id: 'explorer-hat',
+      name: 'Explorer Hat',
+      price: 10,
+      description: 'Cosmetic hat that marks you as a certified town explorer.',
+      type: 'cosmetic',
+      position: new BABYLON.Vector3(2.4, 0, 0.8),
+      build: parent => {
+        const standBase = BABYLON.MeshBuilder.CreateCylinder('hatStandBase', { diameter: 1.2, height: 0.2 }, scene);
+        standBase.parent = parent;
+        standBase.position.y = 0.1;
+        const standMat = materials.metal.clone('hatStandMat');
+        standMat.albedoColor = new BABYLON.Color3(0.65, 0.7, 0.78);
+        standBase.material = standMat;
+
+        const standPost = BABYLON.MeshBuilder.CreateCylinder('hatStandPost', { diameter: 0.35, height: 1.6 }, scene);
+        standPost.parent = parent;
+        standPost.position.y = 0.9;
+        standPost.material = standMat.clone('hatStandPostMat');
+
+        const brim = BABYLON.MeshBuilder.CreateCylinder('hatBrim', { diameterTop: 2.4, diameterBottom: 2.8, height: 0.2 }, scene);
+        brim.parent = parent;
+        brim.position.y = 1.6;
+        const brimMat = materials.wood.clone('hatBrimMat');
+        brimMat.albedoColor = new BABYLON.Color3(0.78, 0.58, 0.28);
+        brim.material = brimMat;
+
+        const crown = BABYLON.MeshBuilder.CreateCylinder('hatCrown', { diameterTop: 1.2, diameterBottom: 1.8, height: 1.4 }, scene);
+        crown.parent = parent;
+        crown.position.y = 2.2;
+        const crownMat = brimMat.clone('hatCrownMat');
+        crownMat.albedoColor = new BABYLON.Color3(0.74, 0.52, 0.24);
+        crown.material = crownMat;
+
+        const band = BABYLON.MeshBuilder.CreateTorus('hatBand', { diameter: 1.5, thickness: 0.18, tessellation: 48 }, scene);
+        band.parent = parent;
+        band.position.y = 2.2;
+        const bandMat = materials.neon.clone('hatBandMat');
+        bandMat.emissiveColor = new BABYLON.Color3(0.18, 0.55, 0.95);
+        band.material = bandMat;
+
+        const badge = BABYLON.MeshBuilder.CreatePlane('hatBadge', { width: 0.36, height: 0.48 }, scene);
+        badge.parent = parent;
+        badge.position = new BABYLON.Vector3(0.8, 2.2, 0.7);
+        badge.rotation.y = BABYLON.Tools.ToRadians(-30);
+        const badgeTex = new BABYLON.DynamicTexture('hatBadgeTex', { width: 128, height: 128 }, scene, true);
+        const badgeCtx = badgeTex.getContext();
+        badgeCtx.fillStyle = '#0f172a';
+        badgeCtx.fillRect(0, 0, 128, 128);
+        badgeCtx.fillStyle = '#22d3ee';
+        badgeCtx.font = 'bold 72px Inter';
+        badgeCtx.textAlign = 'center';
+        badgeCtx.textBaseline = 'middle';
+        badgeCtx.fillText('LT', 64, 68);
+        badgeTex.update(false);
+        const badgeMat = new BABYLON.StandardMaterial('hatBadgeMat', scene);
+        badgeMat.diffuseTexture = badgeTex;
+        badgeMat.emissiveColor = new BABYLON.Color3(0.2, 0.7, 1.0);
+        badge.material = badgeMat;
+
+        return crown;
+      }
+    },
+    {
       id: 'repair-kit',
       name: 'Repair Kit',
       price: 9,

@@ -25,8 +25,8 @@ export function createHUD(gameState) {
 
   const avatarLabels = {
     baseBody: {
-      'bot-girl': 'Girl base body',
-      'bot-boy': 'Boy base body'
+      'bot-girl': 'Body Type A',
+      'bot-boy': 'Body Type B'
     },
     hairstyle: {
       twists: 'Twists',
@@ -53,11 +53,110 @@ export function createHUD(gameState) {
   };
 
   const avatarFieldLabels = {
-    baseBody: 'Base body',
+    baseBody: 'Body type',
     hairstyle: 'Hairstyle',
     top: 'Top',
     bottom: 'Bottoms',
     accessory: 'Accessory'
+  };
+
+  const avatarPreviewColors = {
+    body: {
+      'bot-girl': '#fbe8ff',
+      'bot-boy': '#d8f1ff'
+    },
+    hair: {
+      twists: '#5b21b6',
+      spiky: '#f97316',
+      pony: '#2563eb',
+      buzz: '#0f172a'
+    },
+    top: {
+      'sci-jacket': '#34d399',
+      'retro-tee': '#f59e0b',
+      sporty: '#22d3ee'
+    },
+    bottom: {
+      adventure: '#8b5cf6',
+      shorts: '#f43f5e',
+      tech: '#6366f1'
+    },
+    accessory: {
+      headset: '#22d3ee',
+      sunglasses: '#0f172a',
+      'adventure-hat': '#facc15',
+      none: 'transparent'
+    }
+  };
+
+  const buildAvatarPreviewMarkup = (avatar) => {
+    if (!avatar) {
+      return '';
+    }
+
+    const getColor = (group, key, fallback) => (avatarPreviewColors[group]?.[key] || fallback);
+
+    const bodyColor = getColor('body', avatar.baseBody, '#dbeafe');
+    const hairColor = getColor('hair', avatar.hairstyle, '#1f2937');
+    const topColor = getColor('top', avatar.top, '#38bdf8');
+    const bottomColor = getColor('bottom', avatar.bottom, '#6366f1');
+    const accessoryColor = getColor('accessory', avatar.accessory, 'transparent');
+
+    let accessoryLayer = '';
+    switch (avatar.accessory) {
+      case 'headset':
+        accessoryLayer = `
+          <path d="M14 32C14 16 66 16 66 32" stroke="${accessoryColor}" stroke-width="6" fill="none" stroke-linecap="round" />
+          <rect x="12" y="32" width="12" height="18" rx="4" fill="${accessoryColor}" opacity="0.75" />
+          <rect x="56" y="32" width="12" height="18" rx="4" fill="${accessoryColor}" opacity="0.75" />
+        `;
+        break;
+      case 'sunglasses':
+        accessoryLayer = `
+          <rect x="18" y="30" width="16" height="10" rx="4" fill="${accessoryColor}" opacity="0.9" />
+          <rect x="46" y="30" width="16" height="10" rx="4" fill="${accessoryColor}" opacity="0.9" />
+          <rect x="34" y="33" width="12" height="4" fill="${accessoryColor}" opacity="0.9" />
+        `;
+        break;
+      case 'adventure-hat':
+        accessoryLayer = `
+          <path d="M40 8 L70 30 H10 Z" fill="${accessoryColor}" stroke="#0f172a" stroke-width="4" stroke-linejoin="round" />
+        `;
+        break;
+      default:
+        accessoryLayer = '';
+        break;
+    }
+
+    const detailRows = [
+      { label: 'Body', value: avatarLabels.baseBody[avatar.baseBody] || avatar.baseBody },
+      { label: 'Hair', value: avatarLabels.hairstyle[avatar.hairstyle] || avatar.hairstyle },
+      { label: 'Top', value: avatarLabels.top[avatar.top] || avatar.top },
+      { label: 'Bottoms', value: avatarLabels.bottom[avatar.bottom] || avatar.bottom },
+      { label: 'Extra', value: avatarLabels.accessory[avatar.accessory] || avatar.accessory }
+    ];
+
+    const detailsHtml = detailRows
+      .map(row => `<div class="avatar-preview-row"><span>${row.label}</span><span>${row.value}</span></div>`)
+      .join('');
+
+    return `
+      <div class="avatar-preview-card">
+        <svg class="avatar-preview-svg" viewBox="0 0 80 120" role="img" aria-hidden="true" focusable="false">
+          <path d="M40 6C14 6 10 40 10 52C10 64 70 64 70 52C70 40 66 6 40 6Z" fill="${hairColor}" />
+          <circle cx="40" cy="32" r="22" fill="${bodyColor}" stroke="#0f172a" stroke-width="4" />
+          ${accessoryLayer}
+          <rect x="22" y="54" width="36" height="42" rx="12" fill="${topColor}" stroke="#0f172a" stroke-width="4" />
+          <rect x="22" y="96" width="14" height="24" rx="6" fill="${bottomColor}" stroke="#0f172a" stroke-width="4" />
+          <rect x="44" y="96" width="14" height="24" rx="6" fill="${bottomColor}" stroke="#0f172a" stroke-width="4" />
+          <rect x="30" y="66" width="20" height="18" rx="6" fill="rgba(255, 255, 255, 0.18)" />
+        </svg>
+        <div class="avatar-preview-details">
+          ${detailsHtml}
+        </div>
+      </div>
+      <span class="hint">Avatar styling saves instantly and will sync with future character models.</span>
+    `;
   };
 
   const viewModeNames = {
@@ -111,14 +210,7 @@ export function createHUD(gameState) {
       });
     });
     if (!avatarPreviewEl) return;
-    const summaryLines = [
-      `<strong>Base:</strong> ${avatarLabels.baseBody[avatar.baseBody] || avatar.baseBody}`,
-      `<strong>Hair:</strong> ${avatarLabels.hairstyle[avatar.hairstyle] || avatar.hairstyle}`,
-      `<strong>Top:</strong> ${avatarLabels.top[avatar.top] || avatar.top}`,
-      `<strong>Bottoms:</strong> ${avatarLabels.bottom[avatar.bottom] || avatar.bottom}`,
-      `<strong>Extra:</strong> ${avatarLabels.accessory[avatar.accessory] || avatar.accessory}`
-    ];
-    avatarPreviewEl.innerHTML = `${summaryLines.join('<br>')}<br><span class="hint">Avatar styling saves instantly and will sync with future character models.</span>`;
+    avatarPreviewEl.innerHTML = buildAvatarPreviewMarkup(avatar);
   };
 
   const syncGameplayOptions = (gameplay) => {
@@ -355,8 +447,13 @@ export function createHUD(gameState) {
   });
 
   document.addEventListener('keydown', event => {
-    if (event.key === 'Escape' && menuEl && !menuEl.classList.contains('hidden')) {
-      event.preventDefault();
+    if (event.key !== 'Escape' || !menuEl) {
+      return;
+    }
+    event.preventDefault();
+    if (menuEl.classList.contains('hidden')) {
+      openMenu('home');
+    } else {
       handleMenuAction('close');
     }
   });

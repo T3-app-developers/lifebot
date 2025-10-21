@@ -136,6 +136,10 @@ export function createGameWorld(engine, canvas, gameState, hud) {
   stadiumRoot.root.position = new BABYLON.Vector3(-70, terrain.ground.getHeightAtCoordinates(-70, 80) + 0.1, 80);
 
   const questManager = createQuestManager({ gameState, hud, interactionManager });
+  const flameBotNode = town?.flameBot || null;
+  const orientationState = {
+    reachedFountain: false
+  };
 
   const setViewMode = (mode) => {
     if (mode === 'third-person-back') {
@@ -210,6 +214,17 @@ export function createGameWorld(engine, canvas, gameState, hud) {
       isMoving,
       isSprinting: inputState.isSprinting
     });
+
+    if (!orientationState.reachedFountain && flameBotNode) {
+      const flamebotPosition = typeof flameBotNode.getAbsolutePosition === 'function'
+        ? flameBotNode.getAbsolutePosition()
+        : flameBotNode.position;
+      const distanceToFountain = BABYLON.Vector3.Distance(camera.position, flamebotPosition);
+      if (distanceToFountain <= 8) {
+        orientationState.reachedFountain = true;
+        gameState.emit('orientation-fountain', {});
+      }
+    }
 
     const { focused } = interactionManager;
     if (!focused) hud.hideTooltip();
