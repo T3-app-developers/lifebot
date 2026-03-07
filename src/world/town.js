@@ -879,6 +879,177 @@ export function createTown(scene, materials, shadowGenerator, interactionManager
     }
   });
 
+  // ─── Water Tower with Founding Plaque ────────────────────────────────────
+  const wtBaseX = -18;
+  const wtBaseZ = 22;
+  const wtY = sampleHeight(wtBaseX, wtBaseZ);
+
+  const wtBase = BABYLON.MeshBuilder.CreateCylinder('waterTowerBase', { diameter: 4, height: 1.2, tessellation: 8 }, scene);
+  wtBase.position = new BABYLON.Vector3(wtBaseX, wtY + 0.6, wtBaseZ);
+  wtBase.material = materials.metal.clone('waterTowerBaseMat');
+  wtBase.material.albedoColor = new BABYLON.Color3(0.35, 0.32, 0.28);
+  wtBase.parent = town;
+  wtBase.checkCollisions = true;
+
+  const wtLegs = [0, 1, 2, 3].map(i => {
+    const angle = (i / 4) * Math.PI * 2;
+    const leg = BABYLON.MeshBuilder.CreateCylinder(`waterTowerLeg_${i}`, { diameter: 0.3, height: 7 }, scene);
+    leg.position = new BABYLON.Vector3(wtBaseX + Math.cos(angle) * 1.4, wtY + 4.2, wtBaseZ + Math.sin(angle) * 1.4);
+    leg.material = materials.metal.clone(`waterTowerLegMat_${i}`);
+    leg.material.albedoColor = new BABYLON.Color3(0.3, 0.28, 0.24);
+    leg.parent = town;
+    return leg;
+  });
+
+  const wtTank = BABYLON.MeshBuilder.CreateCylinder('waterTowerTank', { diameter: 4.8, height: 4, tessellation: 16 }, scene);
+  wtTank.position = new BABYLON.Vector3(wtBaseX, wtY + 9.8, wtBaseZ);
+  wtTank.material = materials.metal.clone('waterTowerTankMat');
+  wtTank.material.albedoColor = new BABYLON.Color3(0.28, 0.38, 0.48);
+  wtTank.parent = town;
+
+  const wtCap = BABYLON.MeshBuilder.CreateCylinder('waterTowerCap', { diameterTop: 0.5, diameterBottom: 5.2, height: 1.8, tessellation: 16 }, scene);
+  wtCap.position = new BABYLON.Vector3(wtBaseX, wtY + 12.7, wtBaseZ);
+  wtCap.material = materials.wood.clone('waterTowerCapMat');
+  wtCap.material.albedoColor = new BABYLON.Color3(0.38, 0.28, 0.18);
+  wtCap.parent = town;
+  shadowGenerator?.addShadowCaster(wtTank);
+  shadowGenerator?.addShadowCaster(wtCap);
+
+  // Plaque on the tank base
+  const wtPlaque = BABYLON.MeshBuilder.CreatePlane('waterTowerPlaque', { width: 2.4, height: 1.0 }, scene);
+  wtPlaque.position = new BABYLON.Vector3(wtBaseX, wtY + 7.6, wtBaseZ + 2.5);
+  const wtTex = new BABYLON.DynamicTexture('waterTowerTex', { width: 512, height: 192 }, scene, true);
+  const wctx = wtTex.getContext();
+  wctx.fillStyle = '#1a1408';
+  wctx.fillRect(0, 0, 512, 192);
+  wctx.fillStyle = '#d4c07a';
+  wctx.font = 'bold 30px Inter';
+  wctx.textAlign = 'center';
+  wctx.fillText('LIFEBOT TOWN WATER AUTHORITY', 256, 52);
+  wctx.font = '22px Inter';
+  wctx.fillStyle = '#c8b870';
+  wctx.fillText('Est. Year 1 — "Pure as the founding rain"', 256, 96);
+  wctx.fillText('Capacity: 120,000 litres', 256, 128);
+  wctx.fillText('Post-Incident Retrofit: Year 8', 256, 160);
+  wtTex.update(false);
+  const wtPMat = new BABYLON.StandardMaterial('waterTowerPlaqueMat', scene);
+  wtPMat.diffuseTexture = wtTex;
+  wtPMat.emissiveColor = new BABYLON.Color3(0.25, 0.20, 0.06);
+  wtPlaque.material = wtPMat;
+  wtPlaque.parent = town;
+
+  interactionManager.register(wtPlaque, {
+    prompt: 'Press E to read the water tower plaque',
+    tooltip: '<strong>Town Water Tower</strong><br/>A founding inscription on the tank wall.',
+    range: 6,
+    action: () => {
+      if (!gameState.hasFlag('water-tower-lore')) {
+        gameState.addCoins(1, 'discovery');
+        gameState.setFlag('water-tower-lore', true);
+      }
+      hud.pushNotification('Lifebot Town Water Authority — Est. Year 1. "Pure as the founding rain." The post-incident retrofit in Year 8 replaced all filtration after the harbour contamination.', 'info', 6500);
+    }
+  });
+
+  // ─── Hidden Cellar (Behind House 3, night-only) ───────────────────────────
+  const house3Pos = housePositions[2]; // (-20, y, -12)
+  const trapdoorX = house3Pos.x - 6;
+  const trapdoorZ = house3Pos.z - 6;
+  const trapdoorY = sampleHeight(trapdoorX, trapdoorZ);
+
+  const trapdoor = BABYLON.MeshBuilder.CreateBox('townCellarTrapdoor', { width: 1.8, depth: 1.8, height: 0.12 }, scene);
+  trapdoor.position = new BABYLON.Vector3(trapdoorX, trapdoorY + 0.06, trapdoorZ);
+  const tdMat = materials.wood.clone('townCellarTrapdoorMat');
+  tdMat.albedoColor = new BABYLON.Color3(0.22, 0.16, 0.10);
+  trapdoor.material = tdMat;
+  trapdoor.parent = town;
+  trapdoor.checkCollisions = false;
+
+  // Iron ring handle
+  const tdRing = BABYLON.MeshBuilder.CreateTorus('townCellarTdRing', { diameter: 0.3, thickness: 0.04, tessellation: 16 }, scene);
+  tdRing.position = new BABYLON.Vector3(trapdoorX, trapdoorY + 0.15, trapdoorZ);
+  tdRing.rotation.x = Math.PI / 2;
+  tdRing.material = materials.metal.clone('trapdoorRingMat');
+  tdRing.parent = town;
+
+  let trapdoorOpen = false;
+  let cellarBuilt = false;
+
+  const buildCellar = () => {
+    if (cellarBuilt) return;
+    cellarBuilt = true;
+    // Simple cellar space below ground
+    const floor = BABYLON.MeshBuilder.CreateBox('cellarFloor', { width: 4, depth: 4, height: 0.2 }, scene);
+    floor.position = new BABYLON.Vector3(trapdoorX, trapdoorY - 2.4, trapdoorZ);
+    floor.material = materials.brick.clone('cellarFloorMat');
+    floor.parent = town;
+    floor.checkCollisions = true;
+
+    [[-2, 0], [2, 0], [0, -2], [0, 2]].forEach(([dx, dz], idx) => {
+      const wall = BABYLON.MeshBuilder.CreateBox(`cellarWall_${idx}`, {
+        width: idx < 2 ? 0.2 : 4,
+        depth: idx < 2 ? 4 : 0.2,
+        height: 2.4
+      }, scene);
+      wall.position = new BABYLON.Vector3(trapdoorX + dx, trapdoorY - 1.2, trapdoorZ + dz);
+      wall.material = materials.brick.clone(`cellarWallMat_${idx}`);
+      wall.material.albedoColor = new BABYLON.Color3(0.22, 0.18, 0.14);
+      wall.parent = town;
+      wall.checkCollisions = true;
+    });
+
+    // Chest inside
+    const chest = BABYLON.MeshBuilder.CreateBox('cellarChest', { width: 1.2, height: 0.8, depth: 0.8 }, scene);
+    chest.position = new BABYLON.Vector3(trapdoorX + 1.2, trapdoorY - 1.8, trapdoorZ + 1.2);
+    chest.material = materials.wood.clone('cellarChestMat');
+    chest.material.albedoColor = new BABYLON.Color3(0.5, 0.35, 0.15);
+    chest.parent = town;
+
+    const lid = BABYLON.MeshBuilder.CreateBox('cellarChestLid', { width: 1.2, height: 0.15, depth: 0.8 }, scene);
+    lid.position = new BABYLON.Vector3(0, 0.45, 0);
+    lid.material = materials.metal.clone('cellarChestLidMat');
+    lid.material.albedoColor = new BABYLON.Color3(0.6, 0.55, 0.3);
+    lid.parent = chest;
+
+    interactionManager.register(chest, {
+      prompt: 'Press E to open the chest',
+      tooltip: '<strong>Hidden Cache</strong><br/>Someone stashed this here long ago.',
+      range: 3,
+      action: () => {
+        if (!gameState.hasFlag('cellar-secret')) {
+          gameState.addCoins(10, 'discovery');
+          gameState.setFlag('cellar-secret', true);
+          BABYLON.Animation.CreateAndStartAnimation('cellarLidOpen', lid, 'rotation.x', 60, 60, 0, -Math.PI / 2, BABYLON.Animation.ANIMATIONLOOPMODE_CONSTANT);
+          hud.pushNotification('Inside the chest: 10 coins and a faded note. "The twelve families buried their records here in Year 3 — before the incident changed everything. Guard this well."', 'success', 8000);
+        } else {
+          hud.pushNotification('The chest is empty now — you already claimed its contents.', 'info', 2500);
+        }
+      }
+    });
+  };
+
+  interactionManager.register(trapdoor, {
+    prompt: 'Press E to lift the trapdoor',
+    tooltip: '<strong>Utility Trapdoor</strong><br/>A hidden hatch behind House 3. Only accessible at night.',
+    range: 3.5,
+    action: () => {
+      const meta = scene.metadata;
+      const isNight = meta && typeof meta.cycleT === 'number' && (meta.cycleT < 0.25 || meta.cycleT > 0.75);
+      if (!isNight) {
+        hud.pushNotification('The trapdoor is barely visible in daylight. Come back after dark.', 'warning', 3000);
+        return;
+      }
+      if (trapdoorOpen) {
+        hud.pushNotification('The cellar is already open. Climb down to explore.', 'info', 2000);
+        return;
+      }
+      trapdoorOpen = true;
+      BABYLON.Animation.CreateAndStartAnimation('trapdoorOpen', trapdoor, 'rotation.x', 60, 30, 0, -Math.PI / 2, BABYLON.Animation.ANIMATIONLOOPMODE_CONSTANT);
+      buildCellar();
+      hud.pushNotification('The trapdoor creaks open. A dim light flickers from below.', 'success', 3500);
+    }
+  });
+
   BABYLON.SceneLoader.ImportMeshAsync('', 'assets/', 'weirdmoon.glb', scene).then(({ meshes }) => {
     const moonRoot = new BABYLON.TransformNode('townWeirdMoon', scene);
     moonRoot.parent = town;

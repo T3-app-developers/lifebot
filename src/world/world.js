@@ -122,6 +122,9 @@ export function createGameWorld(engine, canvas, gameState, hud) {
   const stadiumRoot = createLifeBotStadium(scene, {
     parent: null,
     npcFillRatio: 0.14,
+    interactionManager,
+    gameState,
+    hud,
     onSit: seat => {
       const seatPos = seat.getAbsolutePosition();
       camera.position = seatPos.add(new BABYLON.Vector3(0, 0.6, 0.2));

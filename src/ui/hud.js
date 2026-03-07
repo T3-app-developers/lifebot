@@ -1,3 +1,5 @@
+import { DISCOVERY_MANIFEST } from '../core/gameState.js';
+
 const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
 
 export function createHUD(gameState) {
@@ -22,6 +24,8 @@ export function createHUD(gameState) {
   const dinosaursSwitchEl = document.getElementById('dinosaursSwitch');
   const avatarPreviewEl = document.getElementById('avatarPreview');
   const avatarOptionGroups = Array.from(menuEl?.querySelectorAll('.option-group[data-setting]') || []);
+  const explorerLogCountEl = document.getElementById('explorerLogCount');
+  const explorerLogBodyEl = document.getElementById('explorerLogBody');
 
   const avatarLabels = {
     baseBody: {
@@ -226,11 +230,43 @@ export function createHUD(gameState) {
     }
   };
 
+  const renderExplorerLog = () => {
+    if (!explorerLogBodyEl || !explorerLogCountEl) return;
+    let found = 0;
+    let total = 0;
+    explorerLogBodyEl.innerHTML = '';
+    Object.entries(DISCOVERY_MANIFEST).forEach(([location, entries]) => {
+      const section = document.createElement('div');
+      section.className = 'explorer-log-section';
+      const header = document.createElement('h4');
+      header.textContent = location;
+      section.append(header);
+      const list = document.createElement('ul');
+      entries.forEach(({ flag, label }) => {
+        total += 1;
+        const discovered = gameState.hasFlag(flag);
+        if (discovered) found += 1;
+        const li = document.createElement('li');
+        li.className = discovered ? 'discovered' : 'undiscovered';
+        li.textContent = discovered ? `✓ ${label}` : `🔒 ???`;
+        li.title = discovered ? label : 'Not yet discovered';
+        list.append(li);
+      });
+      section.append(list);
+      explorerLogBodyEl.append(section);
+    });
+    explorerLogCountEl.textContent = `${found} / ${total} secrets discovered`;
+  };
+
   const handleMenuAction = (action) => {
     switch (action) {
       case 'resume':
         closeMenu();
         hud.showPrompt('Click to jump back in');
+        break;
+      case 'open-explorer-log':
+        renderExplorerLog();
+        setMenuView('explorer-log');
         break;
       case 'open-settings':
         setMenuView('settings');

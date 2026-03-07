@@ -97,6 +97,9 @@ function createDayNightCycle(scene, { sun, moon, ambient, skybox, skyboxTexture 
     lastUpdate = now;
     timeMs = (timeMs + delta) % cycleDurationMs;
     evaluateCycle();
+    // Publish normalised cycle position for other systems to read (0=midnight, 0.5=noon)
+    if (!scene.metadata) scene.metadata = {};
+    scene.metadata.cycleT = (timeMs % cycleDurationMs) / cycleDurationMs;
   };
 
   scene.onBeforeRenderObservable.add(updateCycle);
