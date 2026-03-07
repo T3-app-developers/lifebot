@@ -1,3 +1,38 @@
+// Discovery manifest: maps flag names to display labels for the Explorer's Log.
+// Grouped by location. Add entries here whenever a new secret is added to the world.
+export const DISCOVERY_MANIFEST = {
+  Town: [
+    { flag: 'water-tower-lore',  label: 'Water Tower Inscription' },
+    { flag: 'cellar-secret',     label: 'Hidden Utility Cellar' },
+    { flag: 'london-trivia',     label: 'London Trivia Board' },
+  ],
+  Skyscraper: [
+    { flag: 'lab-terminal-1',    label: 'Lab Terminal — City Origins' },
+    { flag: 'lab-terminal-2',    label: 'Lab Terminal — The Incident' },
+    { flag: 'lab-terminal-3',    label: 'Lab Terminal — Bunker Coordinates' },
+    { flag: 'telescope-used',    label: 'Sky Lounge Telescope' },
+    { flag: 'observation-plaque',label: 'Observation Deck Plaque' },
+    { flag: 'night-observer',    label: 'Night Star Map' },
+  ],
+  London: [
+    { flag: 'clipper-rider',     label: 'Thames Clipper Tour' },
+    { flag: 'london-eye-log',    label: 'London Eye Maintenance Log' },
+    { flag: 'bridge-plaque',     label: "Tower Bridge Founder's Plaque" },
+  ],
+  Resort: [
+    { flag: 'habitat-flora',     label: 'Coastal Flora Research Log' },
+    { flag: 'habitat-marine',    label: 'Marine Life Research Log' },
+    { flag: 'habitat-avian',     label: 'Avian Sanctuary Research Log' },
+    { flag: 'lagoon-mystery',    label: 'Lagoon Shadow Discovery' },
+    { flag: 'lagoon-depth',      label: 'Submerged Facility Sighting' },
+  ],
+  Stadium: [
+    { flag: 'locker-note',       label: 'Access Tunnel Note' },
+    { flag: 'scoreboard-hacked', label: 'Scoreboard Control Panel' },
+    { flag: 'cheer-triggered',   label: 'Press Box Cheer' },
+  ],
+};
+
 export class GameState extends EventTarget {
   constructor() {
     super();

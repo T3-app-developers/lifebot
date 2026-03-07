@@ -81,9 +81,16 @@
             <p class="menu-intro">Take a short break or tweak how your adventure feels.</p>
             <div class="menu-actions">
               <button type="button" class="menu-action primary" data-action="resume">Resume the Game</button>
+              <button type="button" class="menu-action" data-action="open-explorer-log">Explorer's Log</button>
               <button type="button" class="menu-action" data-action="open-settings">Settings</button>
               <button type="button" class="menu-action danger" data-action="quit">Quit the Game</button>
             </div>
+          </section>
+          <section class="menu-view hidden" data-view="explorer-log">
+            <h3>Explorer's Log</h3>
+            <p class="menu-intro" id="explorerLogCount">Scanning world…</p>
+            <div id="explorerLogBody" class="explorer-log-body"></div>
+            <button type="button" class="menu-link" data-action="back-home">← Back to menu</button>
           </section>
           <section class="menu-view hidden" data-view="settings">
             <p class="menu-intro">Choose what to personalise.</p>

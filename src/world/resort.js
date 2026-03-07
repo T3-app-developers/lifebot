@@ -276,15 +276,29 @@ function createLagoonGondola(scene, materials, parent, interactionManager, hud, 
         scene.stopAnimation(gondola);
         hud.pushNotification('Gondola paused for boarding.', 'success', 2400);
       }
-      gameState.addCoins(2, 'Lagoon excursion');
-      gameState.setFlag('resort-tour', true);
+      if (!gameState.hasFlag('resort-tour')) {
+        gameState.addCoins(2, 'Lagoon excursion');
+        gameState.setFlag('resort-tour', true);
+      }
+      // After 10 seconds, reveal a lagoon mystery
+      if (!gameState.hasFlag('lagoon-mystery')) {
+        setTimeout(() => {
+          if (gameState.hasFlag('lagoon-mystery')) return;
+          gameState.setFlag('lagoon-mystery', true);
+          hud.pushNotification('From the gondola height you notice an unusual shadow beneath the lagoon surface — far too large to be a fish.', 'warning', 6000);
+          // Now reveal the dive marker
+          if (typeof lagoonDiveMarkerRef !== 'undefined' && lagoonDiveMarkerRef.reveal) {
+            lagoonDiveMarkerRef.reveal();
+          }
+        }, 10000);
+      }
     }
   });
 
   return { gondola, rail, controlPanel };
 }
 
-function createResearchHabitats(scene, materials, shadowGenerator, parent, interactionManager, hud) {
+function createResearchHabitats(scene, materials, shadowGenerator, parent, interactionManager, hud, gameState) {
   const habitats = new BABYLON.TransformNode('resortHabitats', scene);
   habitats.parent = parent;
   habitats.position = new BABYLON.Vector3(-64, 0, 32);
@@ -292,6 +306,32 @@ function createResearchHabitats(scene, materials, shadowGenerator, parent, inter
   const enclosureCount = 3;
   const enclosureRadius = 16;
 
+  // Per-habitat lore data
+  const habitatData = [
+    {
+      name: 'Coastal Flora',
+      flag: 'habitat-flora',
+      color: new BABYLON.Color3(0.2, 0.55, 0.22),
+      lore: 'Coastal Flora Sanctuary: A rare bioluminescent algae — Phosphora litoralis — was cultivated here. It only blooms at depths greater than 10 metres. Samples were sent to the London Eye for atmospheric calibration.',
+      coins: 2
+    },
+    {
+      name: 'Marine Life',
+      flag: 'habitat-marine',
+      color: new BABYLON.Color3(0.18, 0.38, 0.55),
+      lore: 'Marine Life Habitat: Observers on the Thames Clipper reported unusual luminescence near the resort lagoon. Cross-referencing with coastal flora samples suggests a sub-surface organism of unknown origin.',
+      coins: 2
+    },
+    {
+      name: 'Avian Sanctuary',
+      flag: 'habitat-avian',
+      color: new BABYLON.Color3(0.48, 0.52, 0.22),
+      lore: 'Avian Sanctuary: A colony of Altis swift — a species thought extinct — was spotted nesting on the Lifebot Tower observation deck. Do not disturb. Do not attempt to access at night.',
+      coins: 2
+    }
+  ];
+
+  // Central info panel (now routes to per-habitat interaction prompts)
   const infoPanel = BABYLON.MeshBuilder.CreatePlane('resortHabitatPanel', { width: 3, height: 2 }, scene);
   infoPanel.parent = habitats;
   infoPanel.position = new BABYLON.Vector3(0, 3, -12);
@@ -300,15 +340,16 @@ function createResearchHabitats(scene, materials, shadowGenerator, parent, inter
   infoPanel.material.emissiveColor = new BABYLON.Color3(0.8, 0.6, 1.0);
 
   interactionManager.register(infoPanel, {
-    prompt: 'Press E to review habitat logs',
-    tooltip: '<strong>Genetic Sanctuaries</strong><br/>Read about our latest rewilding efforts.',
+    prompt: 'Press E to view the sanctuary directory',
+    tooltip: '<strong>Genetic Sanctuaries</strong><br/>Three research habitats — each with its own log.',
     action: () => {
-      hud.pushNotification('Holographic panels detail herbivore migration patterns.', 'info', 3600);
+      hud.pushNotification('Three research habitats surround you: Coastal Flora, Marine Life, and the Avian Sanctuary. Approach each enclosure to read their logs.', 'info', 5000);
     }
   });
 
   for (let i = 0; i < enclosureCount; i++) {
     const angle = (i / enclosureCount) * TAU;
+    const data = habitatData[i];
     const enclosure = BABYLON.MeshBuilder.CreateCylinder(`resortHabitat_${i}`, {
       height: 6,
       diameter: enclosureRadius,
@@ -326,10 +367,44 @@ function createResearchHabitats(scene, materials, shadowGenerator, parent, inter
     }, scene);
     foliage.position = enclosure.position.add(new BABYLON.Vector3(0, 6, 0));
     foliage.material = materials.emissive.clone(`resortHabitatFoliageMat_${i}`);
-    foliage.material.emissiveColor = new BABYLON.Color3(0.2, 0.5, 0.2);
+    foliage.material.emissiveColor = data.color;
     foliage.parent = habitats;
-
     shadowGenerator?.addShadowCaster(foliage);
+
+    // Small lore plaque on each enclosure
+    const loreSign = BABYLON.MeshBuilder.CreatePlane(`resortHabitatSign_${i}`, { width: 2.4, height: 1.2 }, scene);
+    loreSign.parent = habitats;
+    loreSign.position = new BABYLON.Vector3(Math.cos(angle) * 16, 2.5, Math.sin(angle) * 16);
+    loreSign.rotation.y = angle + Math.PI; // face outward
+    const loreTex = new BABYLON.DynamicTexture(`resortHabitatSignTex_${i}`, { width: 512, height: 256 }, scene, true);
+    const lctx = loreTex.getContext();
+    lctx.fillStyle = '#08121e';
+    lctx.fillRect(0, 0, 512, 256);
+    lctx.fillStyle = '#6ad6ff';
+    lctx.font = 'bold 38px Inter';
+    lctx.textAlign = 'center';
+    lctx.fillText(data.name, 256, 72);
+    lctx.fillStyle = '#a0c8e8';
+    lctx.font = '22px Inter';
+    lctx.fillText('Press E to read research log', 256, 128);
+    loreTex.update(false);
+    const loreMat = new BABYLON.StandardMaterial(`resortHabitatSignMat_${i}`, scene);
+    loreMat.diffuseTexture = loreTex;
+    loreMat.emissiveColor = new BABYLON.Color3(0.1, 0.3, 0.5);
+    loreSign.material = loreMat;
+
+    interactionManager.register(loreSign, {
+      prompt: `Press E to read ${data.name} log`,
+      tooltip: `<strong>${data.name}</strong><br/>Research sanctuary log.`,
+      range: 8,
+      action: () => {
+        if (!gameState.hasFlag(data.flag)) {
+          gameState.addCoins(data.coins, 'discovery');
+          gameState.setFlag(data.flag, true);
+        }
+        hud.pushNotification(data.lore, 'info', 7500);
+      }
+    });
   }
 
   return habitats;
@@ -360,8 +435,67 @@ export function createFuturisticResort(scene, materials, shadowGenerator, intera
   const boardwalk = createBoardwalk(scene, materials, root);
   const visitorCenter = createVisitorCenter(scene, materials, shadowGenerator, root);
   const aviary = createAviary(scene, materials, shadowGenerator, root);
-  const habitats = createResearchHabitats(scene, materials, shadowGenerator, root, interactionManager, hud);
+  const habitats = createResearchHabitats(scene, materials, shadowGenerator, root, interactionManager, hud, gameState);
   const gondola = createLagoonGondola(scene, materials, root, interactionManager, hud, gameState);
+
+  // ─── Lagoon Dive Marker ───────────────────────────────────────────────────
+  // A buoy that only becomes interactable after 'lagoon-mystery' flag is set.
+  const buoy = BABYLON.MeshBuilder.CreateSphere('lagoonBuoy', { diameter: 0.9, segments: 8 }, scene);
+  buoy.position = new BABYLON.Vector3(-22, 1.2, 0);
+  buoy.parent = root;
+  const buoyMat = materials.neon.clone('lagoonBuoyMat');
+  buoyMat.emissiveColor = new BABYLON.Color3(1.0, 0.55, 0.05);
+  buoy.material = buoyMat;
+  buoy.isPickable = false; // hidden until mystery revealed
+  buoy.setEnabled(false);
+
+  const buoyPole = BABYLON.MeshBuilder.CreateCylinder('lagoonBuoyPole', { diameter: 0.12, height: 2.2 }, scene);
+  buoyPole.position = new BABYLON.Vector3(-22, 0.5, 0);
+  buoyPole.parent = root;
+  buoyPole.material = materials.metal.clone('lagoonBuoyPoleMat');
+  buoyPole.setEnabled(false);
+
+  // lagoonDiveMarkerRef is closed over by gondola's action handler
+  const lagoonDiveMarkerRef = {
+    reveal: () => {
+      buoy.setEnabled(true);
+      buoyPole.setEnabled(true);
+      buoy.isPickable = true;
+      interactionManager.register(buoy, {
+        prompt: 'Press E to investigate the dive marker',
+        tooltip: '<strong>Lagoon Dive Marker</strong><br/>Something beneath the surface.',
+        range: 6,
+        action: () => {
+          if (!gameState.hasFlag('lagoon-depth')) {
+            gameState.addCoins(5, 'discovery');
+            gameState.setFlag('lagoon-depth', true);
+          }
+          // Pan camera briefly underwater
+          const cam = scene.activeCamera;
+          if (cam) {
+            const rootWorldPos = root.getAbsolutePosition();
+            const savedPos = cam.position.clone();
+            const savedTarget = cam.target ? cam.target.clone() : null;
+            cam.position = new BABYLON.Vector3(rootWorldPos.x - 22, rootWorldPos.y - 1.5, rootWorldPos.z);
+            if (cam.setTarget) cam.setTarget(new BABYLON.Vector3(rootWorldPos.x - 22, rootWorldPos.y - 5, rootWorldPos.z + 4));
+            hud.pushNotification('Beneath the surface: a submerged facility entrance, sealed shut. A keypad glows faintly in the dark water. Grid ref matches Lab Terminal 3.', 'warning', 7000);
+            setTimeout(() => {
+              cam.position.copyFrom(savedPos);
+              if (savedTarget && cam.setTarget) cam.setTarget(savedTarget);
+            }, 4000);
+          } else {
+            hud.pushNotification('Beneath the surface: a submerged facility entrance, sealed shut. A keypad glows faintly. Grid ref matches Lab Terminal 3.', 'warning', 7000);
+          }
+        }
+      });
+    }
+  };
+
+  // If flag was already set on load (e.g. after page refresh with saved state in future),
+  // immediately reveal the marker.
+  if (gameState.hasFlag('lagoon-mystery')) {
+    lagoonDiveMarkerRef.reveal();
+  }
 
   const palmPositions = [
     new BABYLON.Vector3(20, 0, 40),

@@ -634,3 +634,43 @@ html, body {
   from { opacity: 0; transform: translateY(6px); }
   to { opacity: 1; transform: translateY(0); }
 }
+
+/* Explorer's Log */
+.explorer-log-body {
+  display: grid;
+  gap: 16px;
+}
+
+.explorer-log-section h4 {
+  margin: 0 0 8px;
+  font-size: 13px;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--accent);
+}
+
+.explorer-log-section ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 4px;
+}
+
+.explorer-log-section li {
+  font-size: 13px;
+  padding: 6px 10px;
+  border-radius: 8px;
+  border: 1px solid rgba(106, 214, 255, 0.15);
+}
+
+.explorer-log-section li.discovered {
+  color: var(--success);
+  border-color: rgba(106, 255, 176, 0.3);
+  background: rgba(106, 255, 176, 0.06);
+}
+
+.explorer-log-section li.undiscovered {
+  color: var(--hud-muted);
+  background: rgba(10, 18, 30, 0.5);
+}

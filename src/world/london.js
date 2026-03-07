@@ -543,6 +543,31 @@ export function createCentralLondon(scene, materials, shadowGenerator, interacti
 
   const photoSpot = createPhotoSpot(scene, materials, interactionManager, camera, centralLondonRoot, hud);
 
+  // ─── Thames Clipper Boarding ───────────────────────────────────────────────
+  // Boarding sign at the southern bank start (near boat spawn point)
+  const boardingSign = BABYLON.MeshBuilder.CreateBox('clipperBoardingSign', { width: 2.4, depth: 0.12, height: 1.4 }, scene);
+  boardingSign.parent = centralLondonRoot;
+  boardingSign.position = new BABYLON.Vector3(-22, 1.5, -26);
+  boardingSign.rotation.y = Math.PI / 6;
+  const boardingTex = new BABYLON.DynamicTexture('clipperBoardingTex', { width: 512, height: 256 }, scene, true);
+  const bctx = boardingTex.getContext();
+  bctx.fillStyle = '#143155';
+  bctx.fillRect(0, 0, 512, 256);
+  bctx.fillStyle = '#ffffff';
+  bctx.font = 'bold 48px Inter';
+  bctx.textAlign = 'center';
+  bctx.fillText('THAMES CLIPPER', 256, 90);
+  bctx.font = '30px Inter';
+  bctx.fillStyle = '#a4cff8';
+  bctx.fillText('Southbank Departure', 256, 148);
+  bctx.fillText('Press E to board', 256, 196);
+  boardingTex.update(false);
+  const boardingMat = new BABYLON.StandardMaterial('clipperBoardingMat', scene);
+  boardingMat.diffuseTexture = boardingTex;
+  boardingMat.emissiveColor = new BABYLON.Color3(0.08, 0.22, 0.44);
+  boardingSign.material = boardingMat;
+  shadowGenerator?.addShadowCaster(boardingSign);
+
   const boat = createBoat(scene, materials, shadowGenerator);
   boat.root.parent = centralLondonRoot;
   boat.root.position = new BABYLON.Vector3(-20, -0.4, -24);
@@ -566,6 +591,124 @@ export function createCentralLondon(scene, materials, shadowGenerator, interacti
     const forward = next.subtract(current);
     boat.root.rotation.y = Math.atan2(forward.x, forward.z);
   });
+
+  // Wire up boarding sign: trigger a narrated "tour" via sequential notifications
+  if (interactionManager) {
+    interactionManager.register(boardingSign, {
+      prompt: 'Press E to board the Thames Clipper',
+      tooltip: '<strong>Thames Clipper</strong><br/>Take a narrated tour along the river.',
+      range: 6,
+      action: () => {
+        if (!gameState.hasFlag('clipper-rider')) {
+          gameState.addCoins(5, 'discovery');
+          gameState.setFlag('clipper-rider', true);
+        }
+        hud.pushNotification('All aboard the Thames Clipper! Departing Southbank now.', 'success', 3200);
+        setTimeout(() => {
+          hud.pushNotification('The old harbour was decommissioned after the Year 7 incident. The town\'s water supply has never fully recovered.', 'info', 6000);
+        }, 3500);
+        setTimeout(() => {
+          hud.pushNotification('You pass beneath Tower Bridge. The north tower has a sealed hatch — locals say it\'s never been opened.', 'info', 6000);
+        }, 10000);
+        setTimeout(() => {
+          hud.pushNotification('The Clipper completes its route. You disembark back at Southbank.', 'success', 3000);
+        }, 16000);
+      }
+    });
+  }
+
+  // ─── London Eye Gondola Secret (gondola #8, near ground level) ─────────────
+  // Pod #8 is positioned at angle (8/16 * 2π) = π → negative X side, near ground
+  const secretPod = londonEye.pods[8];
+  if (secretPod) {
+    const secretLight = BABYLON.MeshBuilder.CreateSphere('eyeSecretLight', { diameter: 0.35, segments: 6 }, scene);
+    secretLight.parent = secretPod;
+    secretLight.position = new BABYLON.Vector3(0, 0, 0);
+    const blinkMat = new BABYLON.StandardMaterial('eyeSecretLightMat', scene);
+    blinkMat.emissiveColor = new BABYLON.Color3(1.0, 0.85, 0.1);
+    blinkMat.disableLighting = true;
+    secretLight.material = blinkMat;
+
+    // Blink the light
+    let blinkOn = true;
+    let blinkTimer = 0;
+    scene.onBeforeRenderObservable.add(() => {
+      blinkTimer += scene.getEngine().getDeltaTime();
+      if (blinkTimer > 600) {
+        blinkOn = !blinkOn;
+        blinkMat.emissiveColor = blinkOn
+          ? new BABYLON.Color3(1.0, 0.85, 0.1)
+          : new BABYLON.Color3(0.1, 0.08, 0.01);
+        blinkTimer = 0;
+      }
+    });
+
+    if (interactionManager) {
+      interactionManager.register(secretLight, {
+        prompt: 'Press E to examine the blinking light',
+        tooltip: '<strong>Unusual Light Source</strong><br/>Something is tucked inside this gondola.',
+        range: 5,
+        action: () => {
+          if (!gameState.hasFlag('london-eye-log')) {
+            gameState.addCoins(3, 'discovery');
+            gameState.setFlag('london-eye-log', true);
+          }
+          hud.pushNotification('Maintenance Log — Pod 8: "Resort research team requested access to Eye gondola for atmospheric sampling. Bioluminescent specimen observed at lagoon depth 12m. Recommend immediate investigation."', 'info', 8000);
+        }
+      });
+    }
+  }
+
+  // ─── Tower Bridge Hidden Compartment ──────────────────────────────────────
+  // Add a small hatch on the north tower's base level
+  const bridgeNorthTower = towerBridge.towers[0];
+  const bridgeRoot = towerBridge.root;
+  const hatch = BABYLON.MeshBuilder.CreateBox('bridgeHatch', { width: 1.2, height: 1.6, depth: 0.15 }, scene);
+  hatch.parent = bridgeRoot;
+  // North tower is at position (-5 + (-5), 11, -14 + bridge offset)
+  // In bridge local space: towerNorth is at (-5, 11, -14), so hatch on its south face
+  hatch.position = new BABYLON.Vector3(-5, 1.0, -9.6);
+  const hatchMat = materials.brick.clone('bridgeHatchMat');
+  hatchMat.albedoColor = new BABYLON.Color3(0.4, 0.38, 0.35);
+  hatch.material = hatchMat;
+  shadowGenerator?.addShadowCaster(hatch);
+
+  const plaqueMesh = BABYLON.MeshBuilder.CreatePlane('bridgeFounderPlaque', { width: 2.5, height: 1.0 }, scene);
+  plaqueMesh.parent = bridgeRoot;
+  plaqueMesh.position = new BABYLON.Vector3(-5, 2.2, -9.45);
+  const pTex = new BABYLON.DynamicTexture('bridgeFounderTex', { width: 512, height: 192 }, scene, true);
+  const pCtx = pTex.getContext();
+  pCtx.fillStyle = '#1a1408';
+  pCtx.fillRect(0, 0, 512, 192);
+  pCtx.fillStyle = '#d4c07a';
+  pCtx.font = 'bold 32px Inter';
+  pCtx.textAlign = 'center';
+  pCtx.fillText('CITY FOUNDERS — YEAR 1', 256, 56);
+  pCtx.font = '22px Inter';
+  pCtx.fillStyle = '#c8b870';
+  pCtx.fillText('"Built to last through incident and tide."', 256, 100);
+  pCtx.fillText('Signed: The Original Twelve Families', 256, 135);
+  pCtx.fillText('Harbor Commission, Est. Coastal Reach', 256, 162);
+  pTex.update(false);
+  const pMat = new BABYLON.StandardMaterial('bridgeFounderPlaqueMat', scene);
+  pMat.diffuseTexture = pTex;
+  pMat.emissiveColor = new BABYLON.Color3(0.28, 0.22, 0.06);
+  plaqueMesh.material = pMat;
+
+  if (interactionManager) {
+    interactionManager.register(hatch, {
+      prompt: 'Press E to examine the tower hatch',
+      tooltip: '<strong>Tower Bridge — North Tower</strong><br/>An old maintenance hatch, partially ajar.',
+      range: 5,
+      action: () => {
+        if (!gameState.hasFlag('bridge-plaque')) {
+          gameState.addCoins(4, 'discovery');
+          gameState.setFlag('bridge-plaque', true);
+        }
+        hud.pushNotification('Behind the hatch: a tarnished brass plaque. "City Founders — Year 1. Built to last through incident and tide. Signed: The Original Twelve Families."', 'info', 7000);
+      }
+    });
+  }
 
   return {
     root: centralLondonRoot,

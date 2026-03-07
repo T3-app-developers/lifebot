@@ -34,6 +34,9 @@ export function createLifeBotStadium(scene, opts) {
   var npcFillRatio = opts.npcFillRatio || 0.07;
   var onSit = opts.onSit;
   var parent = opts.parent;
+  var interactionManager = opts.interactionManager;
+  var gameState = opts.gameState;
+  var hud = opts.hud;
 
   var root = new BABYLON.TransformNode("LifeBotStadiumRoot", scene);
   if (parent) root.parent = parent;
@@ -341,6 +344,200 @@ export function createLifeBotStadium(scene, opts) {
   sign.rotation.y = entranceCenter;
   sign.material = matWall;
   sign.parent = root;
+
+  // ─── Reactive scoreboard: update based on game flags ─────────────────────
+  if (gameState) {
+    var updateReactiveScoreboard = function() {
+      if (gameState.hasFlag('spy-intel')) {
+        scoreboardState.message = 'AGENT VERIFIED';
+        scoreboardState.home = 7;
+        scoreboardState.away = 3;
+      } else if (gameState.hasFlag('lagoon-depth')) {
+        scoreboardState.message = 'ANOMALY DETECTED';
+      }
+      drawScoreboard();
+    };
+    // Update once on load and on flag changes
+    updateReactiveScoreboard();
+    gameState.addEventListener('flags', function() { updateReactiveScoreboard(); });
+  }
+
+  // ─── Scoreboard control console (press box level) ─────────────────────────
+  if (interactionManager && gameState && hud) {
+    var pressBoxR = wallInnerR + wallThickness + 2;
+    var pressBoxAngle = Math.PI / 2; // 90° from entrance
+    var consoleHeight = wallHeight + seatRows * seatRise + 1.2;
+
+    var console3 = BABYLON.MeshBuilder.CreateBox("scoreboardConsole", { width: 1.8, depth: 0.5, height: 1.2 }, scene);
+    console3.position = new BABYLON.Vector3(
+      Math.cos(pressBoxAngle) * pressBoxR,
+      consoleHeight,
+      Math.sin(pressBoxAngle) * pressBoxR
+    );
+    console3.rotation.y = pressBoxAngle + Math.PI / 2;
+    var consoleMat = new BABYLON.StandardMaterial("scoreboardConsoleMat", scene);
+    consoleMat.emissiveColor = new BABYLON.Color3(0.1, 0.7, 0.9);
+    consoleMat.diffuseColor = new BABYLON.Color3(0.1, 0.2, 0.3);
+    console3.material = consoleMat;
+    console3.parent = root;
+
+    var consoleMsgIndex = 0;
+    var consoleMsgs = [
+      { home: 0, away: 0, msg: 'WELCOME', period: 1 },
+      { home: 3, away: 1, msg: 'HALF TIME', period: 2 },
+      { home: 5, away: 4, msg: 'FINAL SCORE', period: 3 }
+    ];
+
+    interactionManager.register(console3, {
+      prompt: 'Press E to control the scoreboard',
+      tooltip: '<strong>Press Box Console</strong><br/>Cycle scoreboard messages.',
+      range: 5,
+      action: function() {
+        if (!gameState.hasFlag('scoreboard-hacked')) {
+          gameState.setFlag('scoreboard-hacked', true);
+          hud.pushNotification('You gain access to the scoreboard control console. Cycling messages…', 'success', 3000);
+        }
+        consoleMsgIndex = (consoleMsgIndex + 1) % consoleMsgs.length;
+        var msg = consoleMsgs[consoleMsgIndex];
+        scoreboardState.home = msg.home;
+        scoreboardState.away = msg.away;
+        scoreboardState.message = msg.msg;
+        scoreboardState.period = msg.period;
+        drawScoreboard();
+        hud.pushNotification('Scoreboard updated: ' + msg.msg, 'info', 2000);
+      }
+    });
+
+    // ─── Press box cheer trigger ───────────────────────────────────────────
+    var cheerBtn = BABYLON.MeshBuilder.CreateCylinder("cheerButton", { diameter: 0.6, height: 0.3 }, scene);
+    cheerBtn.position = new BABYLON.Vector3(
+      Math.cos(pressBoxAngle) * pressBoxR + Math.cos(pressBoxAngle + Math.PI/2) * 1.2,
+      consoleHeight + 0.65,
+      Math.sin(pressBoxAngle) * pressBoxR + Math.sin(pressBoxAngle + Math.PI/2) * 1.2
+    );
+    var cheerBtnMat = new BABYLON.StandardMaterial("cheerBtnMat", scene);
+    cheerBtnMat.emissiveColor = new BABYLON.Color3(1.0, 0.3, 0.1);
+    cheerBtn.material = cheerBtnMat;
+    cheerBtn.parent = root;
+
+    interactionManager.register(cheerBtn, {
+      prompt: 'Press E to trigger crowd cheer',
+      tooltip: '<strong>Cheer Button</strong><br/>Light up the stadium.',
+      range: 5,
+      action: function() {
+        if (gameState.hasFlag('cheer-triggered')) {
+          hud.pushNotification('The crowd is still recovering from the last cheer!', 'info', 2000);
+          return;
+        }
+        gameState.setFlag('cheer-triggered', true);
+        triggerCheer(1, 0, 'GOAAAL!');
+        hud.pushNotification('The crowd erupts! Confetti fills the stadium.', 'success', 3500);
+        gameState.addCoins(3, 'Crowd cheer');
+      }
+    });
+  }
+
+  // ─── Locker room tunnel ────────────────────────────────────────────────────
+  if (interactionManager && gameState && hud) {
+    var tunnelAngle = Math.PI; // opposite side from entrance
+    var tunnelR = wallInnerR - 1;
+    var tunnelX = Math.cos(tunnelAngle) * tunnelR;
+    var tunnelZ = Math.sin(tunnelAngle) * tunnelR;
+
+    var tunnelDoor = BABYLON.MeshBuilder.CreateBox("lockerTunnelDoor", { width: 2.4, depth: 0.3, height: 3.2 }, scene);
+    tunnelDoor.position = new BABYLON.Vector3(tunnelX, 1.6, tunnelZ);
+    tunnelDoor.rotation.y = tunnelAngle;
+    var tunnelDoorMat = new BABYLON.StandardMaterial("lockerTunnelDoorMat", scene);
+    tunnelDoorMat.diffuseColor = new BABYLON.Color3(0.35, 0.32, 0.28);
+    tunnelDoor.material = tunnelDoorMat;
+    tunnelDoor.parent = root;
+
+    // 3 lockers inside (offset behind the wall)
+    var lockerData = [
+      { dx: -1.5, item: 'energy-drink', label: 'Energy Drink', found: false },
+      { dx: 0,    item: null,           label: 'Note',         found: false },
+      { dx: 1.5,  item: null,           label: 'Empty',        found: false }
+    ];
+
+    var lockers = lockerData.map(function(data, idx) {
+      var locker = BABYLON.MeshBuilder.CreateBox("locker_" + idx, { width: 0.8, depth: 0.5, height: 2.0 }, scene);
+      var lInward = 4;
+      locker.position = new BABYLON.Vector3(
+        tunnelX + Math.cos(tunnelAngle) * lInward + Math.cos(tunnelAngle + Math.PI/2) * data.dx,
+        1.0,
+        tunnelZ + Math.sin(tunnelAngle) * lInward + Math.sin(tunnelAngle + Math.PI/2) * data.dx
+      );
+      var lockerMat = new BABYLON.StandardMaterial("lockerMat_" + idx, scene);
+      lockerMat.diffuseColor = new BABYLON.Color3(0.28, 0.32, 0.38);
+      locker.material = lockerMat;
+      locker.parent = root;
+      return locker;
+    });
+
+    interactionManager.register(tunnelDoor, {
+      prompt: 'Press E to enter the access tunnel',
+      tooltip: '<strong>Access Tunnel</strong><br/>A maintenance passage beneath the stands.',
+      range: 5,
+      action: function() {
+        if (!gameState.hasFlag('spy-briefing')) {
+          hud.pushNotification('The tunnel is sealed. A keypad requires clearance — perhaps after speaking to the spy facility.', 'warning', 3500);
+          return;
+        }
+        hud.pushNotification('The access tunnel opens. Three lockers line the wall.', 'info', 3000);
+      }
+    });
+
+    // Locker interactions
+    interactionManager.register(lockers[0], {
+      prompt: 'Press E to open locker 1',
+      tooltip: '<strong>Locker 1</strong><br/>Something inside.',
+      range: 4,
+      action: function() {
+        if (!gameState.hasFlag('spy-briefing')) {
+          hud.pushNotification('The access tunnel is locked.', 'warning', 2000);
+          return;
+        }
+        if (!lockerData[0].found) {
+          lockerData[0].found = true;
+          gameState.addItem('energy-drink', { name: 'Energy Drink', quantity: 1, type: 'consumable', description: 'A fizzy boost.' });
+          hud.pushNotification('Found: Energy Drink. Someone left provisions here.', 'success', 3000);
+        } else {
+          hud.pushNotification('Locker 1 — empty now.', 'info', 1800);
+        }
+      }
+    });
+
+    interactionManager.register(lockers[1], {
+      prompt: 'Press E to open locker 2',
+      tooltip: '<strong>Locker 2</strong><br/>A piece of paper inside.',
+      range: 4,
+      action: function() {
+        if (!gameState.hasFlag('spy-briefing')) {
+          hud.pushNotification('The access tunnel is locked.', 'warning', 2000);
+          return;
+        }
+        if (!gameState.hasFlag('locker-note')) {
+          gameState.setFlag('locker-note', true);
+          hud.pushNotification('"If you\'re reading this, you found the access tunnel. The stadium scoreboard controls are in the press box above — and something stranger is buried under the lagoon. Grid 0°N, 42°E."', 'info', 9000);
+        } else {
+          hud.pushNotification('A note: coordinates and a reference to the lagoon. You already read it.', 'info', 2500);
+        }
+      }
+    });
+
+    interactionManager.register(lockers[2], {
+      prompt: 'Press E to open locker 3',
+      tooltip: '<strong>Locker 3</strong><br/>Seems empty.',
+      range: 4,
+      action: function() {
+        if (!gameState.hasFlag('spy-briefing')) {
+          hud.pushNotification('The access tunnel is locked.', 'warning', 2000);
+          return;
+        }
+        hud.pushNotification('Locker 3 — empty. Whoever was here took everything else with them.', 'info', 2500);
+      }
+    });
+  }
 
   return {
     root: root,
