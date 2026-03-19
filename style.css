@@ -617,7 +617,7 @@ html, body {
 
 .avatar-preview {
   display: grid;
-  gap: 8px;
+  gap: 12px;
   padding: 16px;
   border-radius: 16px;
   background: rgba(10, 18, 32, 0.78);
@@ -626,8 +626,50 @@ html, body {
   line-height: 1.5;
 }
 
-.avatar-preview strong {
-  color: var(--accent);
+.avatar-preview-card {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 16px;
+  align-items: center;
+}
+
+.avatar-preview-svg {
+  width: 96px;
+  height: 144px;
+  filter: drop-shadow(0 10px 24px rgba(10, 17, 30, 0.45));
+  border-radius: 14px;
+  background: radial-gradient(circle at 40% 20%, rgba(255, 255, 255, 0.22), rgba(96, 167, 255, 0.06));
+  padding: 8px;
+  box-sizing: border-box;
+}
+
+.avatar-preview-details {
+  display: grid;
+  gap: 8px;
+}
+
+.avatar-preview-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 13px;
+}
+
+.avatar-preview-row span:first-child {
+  text-transform: uppercase;
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  color: var(--hud-muted);
+}
+
+.avatar-preview-row span:last-child {
+  font-weight: 600;
+  color: var(--hud-text);
+}
+
+.avatar-preview .hint {
+  color: var(--hud-muted);
+  font-size: 12px;
 }
 
 @keyframes menu-fade {

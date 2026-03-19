@@ -36,13 +36,13 @@ export const DISCOVERY_MANIFEST = {
 export class GameState extends EventTarget {
   constructor() {
     super();
-    this.coins = 25;
+    this.coins = 0;
     this.inventory = new Map();
     this.flags = new Set();
     this.quests = new Map();
     this.activeQuestId = null;
     this.objectives = [];
-    this.lastStatusLine = 'Explore Lifebot Town';
+    this.lastStatusLine = 'Meet FlameBot by the fountain';
     this.hiddenSequence = [];
     this.settings = {
       gameplay: {
